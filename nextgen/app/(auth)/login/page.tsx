@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { entrar } from "@/services/autenticar";
+import { db } from "@/firebase/config";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -17,8 +19,15 @@ export default function LoginPage() {
     setCarregando(true);
 
     try {
-      await entrar(email, senha);
-      router.push("/aplicacao");
+      const user = await entrar(email, senha);
+      // busca perfil no Firestore para decidir para onde redirecionar
+      const profileSnap = await getDoc(doc(db, "users", user.uid));
+      const data = profileSnap.exists() ? profileSnap.data() : null;
+      if (data && (data as any).tipoConta === "empresa") {
+        router.push("/perfils/empresa");
+      } else {
+        router.push("/perfils/estudante");
+      }
     } catch {
       setErro("E-mail ou senha incorretos.");
     } finally {
