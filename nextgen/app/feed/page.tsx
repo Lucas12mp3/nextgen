@@ -41,7 +41,21 @@ export default function FeedPage() {
 
 				<section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
 					<div className="space-y-6">
-						<PostForm profile={profile} />
+						<div className="flex items-center justify-between gap-3">
+							<PostForm profile={profile} />
+							<div className="hidden md:block">
+								{user ? (
+									<a
+										href={profile?.tipoConta === "empresa" ? "/perfils/empresa" : "/perfils/estudante"}
+										className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg hover:bg-[#0f2f4d]"
+									>
+										Meu perfil
+									</a>
+								) : (
+									<a href="/login" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a]">Entrar</a>
+								)}
+							</div>
+						</div>
 
 						{loading ? (
 							<div className="rounded-[20px] border border-[#dfeeff] bg-white p-6 text-center">Carregando publicações...</div>
