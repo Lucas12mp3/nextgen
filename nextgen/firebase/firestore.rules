@@ -36,5 +36,13 @@ service cloud.firestore {
         allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
       }
     }
+
+    // Proposals
+    match /proposals/{proposalId} {
+      allow read: if request.auth != null && (resource.data.toUserId == request.auth.uid || resource.data.fromCompanyId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.fromCompanyId == request.auth.uid && request.resource.data.fromCompanyName is string && request.resource.data.toUserId is string && request.resource.data.message is string;
+      allow update: if request.auth != null && (resource.data.toUserId == request.auth.uid || resource.data.fromCompanyId == request.auth.uid);
+      allow delete: if false;
+    }
   }
 }

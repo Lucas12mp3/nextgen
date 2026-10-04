@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
+import NotificationsButton from "@/components/proposals/NotificationsButton";
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
@@ -53,18 +54,9 @@ export default function Header() {
       <div className="flex items-center gap-3">
         {user ? (
           <>
-            <Link
-              href="/feed"
-              className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]"
-            >
-              Feed
-            </Link>
-            <Link
-              href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"}
-              className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]"
-            >
-              Meu perfil
-            </Link>
+            <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Feed</Link>
+            <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]">Meu perfil</Link>
+            <NotificationsButton />
             <button onClick={handleSignOut} className="rounded-full bg-red-50 text-red-700 px-3 py-1 text-sm">Sair</button>
           </>
         ) : (

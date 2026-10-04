@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
-
+import ProposalForm from "@/components/proposals/ProposalForm";
+import { sendApplication } from "@/services/applications";
 type FeedItem = {
   id: number;
   type: "post" | "vaga" | "evento";
@@ -312,6 +313,13 @@ export default function PerfilEstudantePage() {
                   <strong className="text-[#123a5a]">5</strong>
                 </div>
               </div>
+            </div>
+
+            {/* Proposal form - visible to companies viewing a estudante profile (hide for the profile owner) */}
+            <div>
+              {user && profile?.tipoConta === "estudante" && profile?.uid !== user.uid && (
+                <ProposalForm toUserId={profile?.uid || user.uid} />
+              )}
             </div>
 
             <div className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
