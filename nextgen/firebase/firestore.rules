@@ -1,0 +1,40 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users: each user document keyed by UID
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false; // account deletion handled via Admin SDK or Authentication flows
+    }
+
+    // Posts collection
+    match /posts/{postId} {
+      allow read: if true; // public feed
+
+      allow create: if request.auth != null
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && (request.resource.data.kind in ["post","vaga","evento"]);
+
+      allow update: if request.auth != null
+        && resource.data.authorId == request.auth.uid
+        && (request.resource.data.authorId == resource.data.authorId)
+        && (request.resource.data.content is string);
+
+      allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if request.auth != null
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0;
+        allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+      }
+    }
+  }
+}

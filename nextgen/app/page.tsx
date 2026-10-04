@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Header from "@/components/Header";
 
 const stats = [
   { value: "+8k", label: "jovens conectados" },
@@ -43,38 +44,7 @@ const steps = [
 export default function Home() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
-      <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#9ad4ff] via-[#6fa8dc] to-[#123a5a] text-xl font-black text-white shadow-lg shadow-blue-200">
-            N
-          </div>
-          <div>
-            <p className="text-lg font-black tracking-tight text-[#123a5a]">NextGen</p>
-          </div>
-        </div>
-
-        <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
-          <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>
-          <a href="#beneficios" className="transition hover:text-[#123a5a]">Benefícios</a>
-          <a href="#oportunidades" className="transition hover:text-[#123a5a]">Oportunidades</a>
-          <a href="#empresas" className="transition hover:text-[#123a5a]">Empresas</a>
-        </nav>
-
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]"
-          >
-            Entrar
-          </Link>
-          <Link
-            href="/cadastro"
-            className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]"
-          >
-            Cadastrar
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
         <div>
@@ -113,6 +83,7 @@ export default function Home() {
                 <p>{item.label}</p>
               </div>
             ))}
+            <p className="w-full mt-2 text-xs font-semibold text-yellow-800">Dados de exemplo — não reais</p>
           </div>
         </div>
 
@@ -121,6 +92,7 @@ export default function Home() {
           <div className="absolute -right-10 bottom-6 h-40 w-40 rounded-full bg-[#ffd166]/40 blur-3xl" />
 
           <div className="relative overflow-hidden rounded-[32px] border border-[#d7ebff] bg-white/80 p-5 shadow-[0_24px_80px_rgba(31,84,138,0.14)] backdrop-blur-sm">
+            <div className="absolute right-4 top-4 rounded-full bg-yellow-50/90 px-3 py-1 text-xs font-semibold text-yellow-800 ring-1 ring-yellow-100">Dados de exemplo — não reais</div>
             <div className="rounded-[24px] bg-gradient-to-br from-[#eaf6ff] via-[#dfeeff] to-[#cfe8ff] p-5">
               <div className="flex items-center justify-between">
                 <div>
