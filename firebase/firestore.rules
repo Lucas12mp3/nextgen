@@ -99,5 +99,33 @@ service cloud.firestore {
         && request.resource.data.read == true;
       allow delete: if false;
     }
+
+    match /desafios/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.empresaId == request.auth.uid
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tipoConta == "empresa"
+        && request.resource.data.empresaNome is string
+        && request.resource.data.titulo is string
+        && request.resource.data.descricao is string
+        && request.resource.data.area is string
+        && request.resource.data.nivel in ["iniciante", "intermediario", "avancado"]
+        && request.resource.data.notaMinima is number
+        && request.resource.data.perguntas is list
+        && request.resource.data.status == "aberto";
+      allow update, delete: if request.auth != null && resource.data.empresaId == request.auth.uid;
+    }
+
+    match /conquistas/{id} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.desafioId is string
+        && request.resource.data.desafioTitulo is string
+        && request.resource.data.empresaNome is string
+        && request.resource.data.nivel in ["iniciante", "intermediario", "avancado"]
+        && request.resource.data.nota is number;
+      allow update, delete: if false;
+    }
   }
 }

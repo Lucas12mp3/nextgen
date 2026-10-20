@@ -6,6 +6,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { RequireProfileType } from "@/components/auth/RequireProfileType";
+import { subscribeConquistas, type Conquista } from "@/services/desafios";
 
 type StudentProfile = {
   nome?: string;
@@ -30,6 +31,7 @@ export default function PerfilEstudantePage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [privateProfile, setPrivateProfile] = useState<PrivateStudentProfile | null>(null);
+  const [conquistas, setConquistas] = useState<Conquista[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -52,6 +54,13 @@ export default function PerfilEstudantePage() {
     return () => unsub();
   }, [router]);
 
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const unsub = subscribeConquistas(user.uid, (items) => setConquistas(items));
+    return () => unsub();
+  }, [user?.uid]);
+
   const skills = Array.isArray(profile?.skills) ? profile.skills : [];
   const titulo = profile?.titulo || "Estudante";
   const idadeTexto =
@@ -59,6 +68,18 @@ export default function PerfilEstudantePage() {
     (privateProfile?.dataNascimento
       ? `${Math.max(0, new Date().getFullYear() - new Date(privateProfile.dataNascimento).getFullYear())} anos`
       : "");
+
+  const formatarData = (value: unknown) => {
+    if (value && typeof value === "object" && "seconds" in value && typeof (value as { seconds?: number }).seconds === "number") {
+      return new Date((value as { seconds: number }).seconds * 1000).toLocaleDateString("pt-BR");
+    }
+
+    if (value instanceof Date) {
+      return value.toLocaleDateString("pt-BR");
+    }
+
+    return "Recente";
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
 
@@ -111,27 +132,75 @@ export default function PerfilEstudantePage() {
                 {profile?.portfolio && <a href={profile.portfolio} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">Portfólio</a>}
                 {profile?.resumeUrl && <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">Currículo</a>}
               </div>
+
+              <div className="mt-6 rounded-[18px] border border-[#dfeeff] bg-[#f9fcff] p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-black text-[#123a5a]">Conquistas</h2>
+                  <Link href="/desafios" className="text-xs font-semibold text-[#123a5a] underline">Ver desafios</Link>
+                </div>
+                {conquistas.length === 0 ? (
+                  <p className="text-sm text-slate-600">Ainda não há conquistas conquistadas.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {conquistas.map((item) => (
+                      <div key={item.id} className="rounded-2xl border border-[#dfeeff] bg-white p-3">
+                        <p className="text-sm font-black text-[#123a5a]">{item.desafioTitulo}</p>
+                        <p className="text-xs text-slate-500">{item.empresaNome} • {item.nivel}</p>
+                        <p className="mt-1 text-xs font-semibold text-emerald-700">Nota: {item.nota}%</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <aside className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-black text-[#123a5a]">Dados do perfil</h2>
-              <div className="mt-4 space-y-3 text-sm text-slate-700">
-                <div className="flex items-center justify-between gap-3">
-                  <span>Título</span>
-                  <span className="font-semibold text-[#123a5a]">{titulo}</span>
+            <aside className="space-y-6">
+              <div className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-black text-[#123a5a]">Dados do perfil</h2>
+                <div className="mt-4 space-y-3 text-sm text-slate-700">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Título</span>
+                    <span className="font-semibold text-[#123a5a]">{titulo}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Instituição</span>
+                    <span className="font-semibold text-[#123a5a]">{profile?.instituicao || "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Habilidades</span>
+                    <span className="font-semibold text-[#123a5a]">{skills.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Feed</span>
+                    <Link href="/feed" className="font-semibold text-[#123a5a] underline">Abrir</Link>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Instituição</span>
-                  <span className="font-semibold text-[#123a5a]">{profile?.instituicao || "—"}</span>
+              </div>
+
+              <div className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h2 className="text-lg font-black text-[#123a5a]">Desafios concluídos</h2>
+                  <span className="rounded-full bg-[#edf6ff] px-2.5 py-1 text-xs font-bold text-[#123a5a]">{conquistas.length}</span>
                 </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Habilidades</span>
-                  <span className="font-semibold text-[#123a5a]">{skills.length}</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Feed</span>
-                  <Link href="/feed" className="font-semibold text-[#123a5a] underline">Abrir</Link>
-                </div>
+
+                {conquistas.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f7fbff] p-4 text-sm text-slate-600">
+                    Nenhum desafio concluído ainda. <Link href="/desafios" className="font-semibold text-[#123a5a] underline">Explorar desafios</Link>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {conquistas.map((item) => (
+                      <div key={item.id} className="rounded-[18px] border border-[#eaf4ff] bg-[#f9fcff] p-3">
+                        <p className="text-sm font-black text-[#123a5a]">{item.desafioTitulo}</p>
+                        <p className="mt-1 text-[11px] text-slate-500">{item.empresaNome} • {item.nivel}</p>
+                        <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
+                          <span className="font-semibold text-emerald-700">Nota: {item.nota}%</span>
+                          <span className="text-slate-500">{formatarData(item.createdAt)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </aside>
           </section>

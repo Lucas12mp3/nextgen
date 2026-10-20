@@ -36,6 +36,7 @@ export default function PerfilEmpresaPage() {
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [selectedJob, setSelectedJob] = useState<Vaga | null>(null);
   const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [challengeCounts, setChallengeCounts] = useState<Record<string, number>>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -65,6 +66,27 @@ export default function PerfilEmpresaPage() {
     });
     return () => unsub();
   }, []);
+
+  useEffect(() => {
+    if (!students.length) {
+      setChallengeCounts({});
+      return;
+    }
+
+    const unsubs = students.map((student) => {
+      const q = query(collection(db, "conquistas"), where("userId", "==", student.uid));
+      return onSnapshot(q, (snap) => {
+        setChallengeCounts((prev) => ({
+          ...prev,
+          [student.uid]: snap.docs.length,
+        }));
+      });
+    });
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [students]);
 
   async function handleFecharVaga(vagaId: string) {
     try {
@@ -118,8 +140,9 @@ export default function PerfilEmpresaPage() {
           </section>
 
           <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
-            <div className="mb-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-[#123a5a]">Mural de vagas</h3>
+              <Link href="/desafios" className="text-xs font-semibold text-[#123a5a] underline">Gerenciar desafios</Link>
             </div>
             <JobForm />
           </section>
@@ -156,7 +179,7 @@ export default function PerfilEmpresaPage() {
             <h3 className="text-sm font-bold text-[#123a5a]">Estudantes em destaque</h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               {students.slice(0, 6).map((s) => (
-                <StudentCard key={s.uid} student={s} canPropose />
+                <StudentCard key={s.uid} student={s} canPropose challengeCount={challengeCounts[s.uid] ?? 0} />
               ))}
             </div>
           </section>
