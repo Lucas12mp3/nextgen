@@ -54,14 +54,14 @@ export default function Header() {
         <a href="#empresas" className="transition hover:text-[#123a5a]">Empresas</a>
       </nav>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-end gap-3">
         {user ? (
           <>
-            <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Feed</Link>
-            <Link href="/vagas" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
-            <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]">Meu perfil</Link>
+            <Link href="/feed" className="inline-flex items-center justify-center rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Feed</Link>
+            <Link href="/vagas" className="inline-flex items-center justify-center rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
+            <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="inline-flex items-center justify-center rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]">Meu perfil</Link>
             <NotificationsButton />
-            <button onClick={handleSignOut} className="rounded-full bg-red-50 text-red-700 px-3 py-1 text-sm">Sair</button>
+            <button onClick={handleSignOut} className="rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">Sair</button>
           </>
         ) : (
           <>

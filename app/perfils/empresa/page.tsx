@@ -92,12 +92,13 @@ export default function PerfilEmpresaPage() {
                 <h1 className="text-2xl font-black text-[#123a5a]">{profile?.nome || "Empresa"}</h1>
                 <p className="text-sm text-slate-600">{profile?.tagline || "Conectando formação e mercado de trabalho"}</p>
                 <p className="mt-2 text-sm text-slate-700">{profile?.localizacao || ""}</p>
-                <div className="mt-3 flex gap-3 items-center">
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                   <Link href={profile?.site || "#"} className="text-sm text-[#123a5a] underline">Website</Link>
                   <Link href={profile?.linkedin || "#"} className="text-sm text-[#123a5a] underline">LinkedIn</Link>
-                  <Link href="/perfils/empresa/editar" className="ml-4 rounded-full bg-[#123a5a] px-3 py-1 text-xs font-semibold text-white">Editar perfil</Link>
+                  <Link href="/perfils/empresa/editar" className="rounded-full bg-[#123a5a] px-3 py-1 text-xs font-semibold text-white">Editar perfil</Link>
+                  <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Ir para o feed</Link>
                   {profile?.resumeUrl && (
-                    <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="ml-2 rounded-full border border-[#cfe8ff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Visualizar documento</a>
+                    <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="rounded-full border border-[#cfe8ff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Visualizar documento</a>
                   )}
                 </div>
               </div>
