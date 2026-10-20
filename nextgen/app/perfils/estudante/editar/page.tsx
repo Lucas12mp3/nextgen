@@ -34,15 +34,15 @@ export default function EditarPerfilEstudante() {
         try {
           const snap = await getDoc(doc(db, "users", u.uid));
           if (snap.exists()) {
-            const p: any = snap.data();
-            setTitulo(p.titulo || "");
-            setInstituicao(p.instituicao || "");
-            setDescricao(p.descricao || "");
-            setGithub(p.github || "");
-            setLinkedin(p.linkedin || "");
-            setPortfolio(p.portfolio || "");
-            setResumeLink(p.resumeUrl || "");
-            setSkills((p.skills && Array.isArray(p.skills)) ? p.skills.join(", ") : "");
+            const p = snap.data() as Record<string, unknown>;
+            setTitulo(typeof p.titulo === "string" ? p.titulo : "");
+            setInstituicao(typeof p.instituicao === "string" ? p.instituicao : "");
+            setDescricao(typeof p.descricao === "string" ? p.descricao : "");
+            setGithub(typeof p.github === "string" ? p.github : "");
+            setLinkedin(typeof p.linkedin === "string" ? p.linkedin : "");
+            setPortfolio(typeof p.portfolio === "string" ? p.portfolio : "");
+            setResumeLink(typeof p.resumeUrl === "string" ? p.resumeUrl : "");
+            setSkills(Array.isArray(p.skills) ? (p.skills as string[]).join(", ") : "");
           }
         } catch (err) {
           console.error("Erro ao carregar perfil:", err);
@@ -75,7 +75,7 @@ export default function EditarPerfilEstudante() {
         resumeUrl = url;
       }
 
-      const data: any = {
+      const data: Record<string, string | string[] | null> = {
         titulo,
         instituicao,
         descricao,

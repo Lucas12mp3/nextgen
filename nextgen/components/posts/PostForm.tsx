@@ -3,33 +3,52 @@ import { useState } from "react";
 import { createPost } from "@/services/posts";
 import { auth } from "@/firebase/config";
 
+type ProfileInfo = {
+  nome?: string;
+  tipoConta?: string | null;
+  photoURL?: string | null;
+};
+
 type Props = {
   onPublished?: () => void;
-  profile?: any;
+  profile?: ProfileInfo;
 };
 
 export default function PostForm({ onPublished, profile }: Props) {
+  const [title, setTitle] = useState("");
   const [text, setText] = useState("");
   const [kind, setKind] = useState<"post" | "vaga" | "evento">("post");
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   async function publish() {
-    if (!auth.currentUser) return alert("Faça login para publicar.");
-    if (!text.trim()) return;
+    if (!auth.currentUser) {
+      setFeedback({ type: "error", message: "Faça login para publicar." });
+      return;
+    }
+    if (!text.trim()) {
+      setFeedback({ type: "error", message: "Escreva uma mensagem antes de publicar." });
+      return;
+    }
     setLoading(true);
+    setFeedback(null);
     try {
       await createPost({
         authorId: auth.currentUser.uid,
         authorName: profile?.nome || auth.currentUser.displayName || "",
         authorPhotoURL: profile?.photoURL || auth.currentUser.photoURL || null,
         authorType: profile?.tipoConta || null,
+        title: title.trim() || undefined,
         content: text.trim(),
         kind,
       });
+      setTitle("");
       setText("");
+      setFeedback({ type: "success", message: "Publicação enviada com sucesso." });
       if (onPublished) onPublished();
-    } catch (err: any) {
-      alert(err.message || "Erro ao publicar");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro ao publicar.";
+      setFeedback({ type: "error", message });
     } finally {
       setLoading(false);
     }
@@ -52,6 +71,13 @@ export default function PostForm({ onPublished, profile }: Props) {
         ))}
       </div>
 
+      <input
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        placeholder="Título da publicação (opcional)"
+        className="mb-3 w-full rounded-2xl border border-[#dfeeff] bg-[#f9fcff] px-4 py-3 text-sm outline-none transition focus:border-[#9ad4ff]"
+      />
+
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -59,6 +85,12 @@ export default function PostForm({ onPublished, profile }: Props) {
         rows={4}
         className="w-full rounded-2xl border border-[#dfeeff] bg-[#f9fcff] px-4 py-3 text-sm outline-none transition focus:border-[#9ad4ff]"
       />
+
+      {feedback && (
+        <p className={`mt-3 text-sm ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
+          {feedback.message}
+        </p>
+      )}
 
       <div className="mt-3 flex justify-end">
         <button

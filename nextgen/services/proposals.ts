@@ -9,8 +9,10 @@ export type ProposalData = {
   message: string;
   requirements?: string;
   status?: "pending" | "accepted" | "rejected";
-  createdAt?: any;
+  createdAt?: unknown;
 };
+
+export type ProposalRecord = ProposalData & { id: string; read?: boolean };
 
 export async function sendProposal(payload: ProposalData) {
   const ref = await addDoc(collection(db, "proposals"), {
@@ -23,9 +25,9 @@ export async function sendProposal(payload: ProposalData) {
   return ref.id;
 }
 
-export function subscribeUserProposals(uid: string, onUpdate: (items: any[]) => void) {
+export function subscribeUserProposals(uid: string, onUpdate: (items: ProposalRecord[]) => void) {
   const q = query(collection(db, "proposals"), where("toUserId", "==", uid));
-  return onSnapshot(q, (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }))));
+  return onSnapshot(q, (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as ProposalRecord[]));
 }
 
 export async function markProposalRead(proposalId: string) {
@@ -37,7 +39,7 @@ export async function respondProposal(proposalId: string, uid: string, accept: b
   const ref = doc(db, "proposals", proposalId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Proposal not found");
-  const data = snap.data() as any;
+  const data = snap.data() as Record<string, unknown>;
   if (data.toUserId !== uid) throw new Error("Not authorized");
   await updateDoc(ref, { status: accept ? "accepted" : "rejected", read: true });
 }

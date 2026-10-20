@@ -21,17 +21,25 @@ export type PostData = {
   authorName: string;
   authorPhotoURL?: string | null;
   authorType?: string | null;
+  title?: string;
   content: string;
   kind: "post" | "vaga" | "evento";
-  createdAt?: any;
+  createdAt?: unknown;
   likesCount?: number;
   commentsCount?: number;
 };
 
-export function subscribeToPosts(onUpdate: (items: any[]) => void) {
+export type PostRecord = PostData & {
+  id: string;
+  title?: string | null;
+  content: string;
+  likes?: string[];
+};
+
+export function subscribeToPosts(onUpdate: (items: PostRecord[]) => void) {
   const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
   const unsub = onSnapshot(q, (snap) => {
-    const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as PostRecord[];
     onUpdate(items);
   });
   return unsub;
@@ -40,6 +48,7 @@ export function subscribeToPosts(onUpdate: (items: any[]) => void) {
 export async function createPost(payload: PostData) {
   const docRef = await addDoc(collection(db, "posts"), {
     ...payload,
+    title: payload.title ?? null,
     createdAt: serverTimestamp(),
     likes: [],
     likesCount: 0,
@@ -51,17 +60,18 @@ export async function createPost(payload: PostData) {
 export async function toggleLike(postId: string, uid: string) {
   const postRef = doc(db, "posts", postId);
   await runTransaction(db, async (tx) => {
-    const snap = await tx.get(postRef as any);
+    const snap = await tx.get(postRef);
     if (!snap.exists()) throw new Error("Post não encontrado");
-    const data = snap.data() as any;
-    const liked = Array.isArray(data.likes) && data.likes.includes(uid);
+    const data = snap.data() as Record<string, unknown>;
+    const likes = Array.isArray(data.likes) ? (data.likes as string[]) : [];
+    const liked = likes.includes(uid);
     if (liked) {
-      tx.update(postRef as any, {
+      tx.update(postRef, {
         likes: arrayRemove(uid),
         likesCount: increment(-1),
       });
     } else {
-      tx.update(postRef as any, {
+      tx.update(postRef, {
         likes: arrayUnion(uid),
         likesCount: increment(1),
       });
@@ -78,28 +88,32 @@ export async function addComment(postId: string, comment: { authorId: string; au
   await updateDoc(doc(db, "posts", postId), { commentsCount: increment(1) });
 }
 
-export function subscribeComments(postId: string, onUpdate: (items: any[]) => void) {
+export function subscribeComments(postId: string, onUpdate: (items: Array<Record<string, unknown> & { id: string }>) => void) {
   const q = query(collection(db, "posts", postId, "comments"), orderBy("createdAt", "asc"));
   const unsub = onSnapshot(q, (snap) => {
-    onUpdate(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })));
+    onUpdate(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })));
   });
   return unsub;
 }
 
-export async function editPost(postId: string, uid: string, newContent: string) {
+export async function editPost(postId: string, uid: string, newTitle: string, newContent: string) {
   const ref = doc(db, "posts", postId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Post não encontrado");
-  const data = snap.data() as any;
+  const data = snap.data() as Record<string, unknown>;
   if (data.authorId !== uid) throw new Error("Não autorizado");
-  await updateDoc(ref, { content: newContent, updatedAt: serverTimestamp() });
+  await updateDoc(ref, {
+    title: newTitle.trim() || null,
+    content: newContent.trim(),
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function deletePost(postId: string, uid: string) {
   const ref = doc(db, "posts", postId);
   const snap = await getDoc(ref);
   if (!snap.exists()) throw new Error("Post não encontrado");
-  const data = snap.data() as any;
+  const data = snap.data() as Record<string, unknown>;
   if (data.authorId !== uid) throw new Error("Não autorizado");
   await deleteDoc(ref);
 }

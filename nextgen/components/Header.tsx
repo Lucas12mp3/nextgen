@@ -16,8 +16,9 @@ export default function Header() {
       if (u) {
         try {
           const snap = await getDoc(doc(db, "users", u.uid));
-          if (snap.exists()) setProfileType((snap.data() as any).tipoConta ?? null);
-        } catch (e) {
+          const profile = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+          setProfileType(typeof profile?.tipoConta === "string" ? profile.tipoConta : null);
+        } catch {
           setProfileType(null);
         }
       } else {
@@ -45,6 +46,8 @@ export default function Header() {
       </div>
 
       <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
+        <Link href="/" className="transition hover:text-[#123a5a]">Início</Link>
+        <Link href="/vagas" className="transition hover:text-[#123a5a]">Vagas</Link>
         <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>
         <a href="#beneficios" className="transition hover:text-[#123a5a]">Benefícios</a>
         <a href="#oportunidades" className="transition hover:text-[#123a5a]">Oportunidades</a>
@@ -55,12 +58,14 @@ export default function Header() {
         {user ? (
           <>
             <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Feed</Link>
+            <Link href="/vagas" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
             <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]">Meu perfil</Link>
             <NotificationsButton />
             <button onClick={handleSignOut} className="rounded-full bg-red-50 text-red-700 px-3 py-1 text-sm">Sair</button>
           </>
         ) : (
           <>
+            <Link href="/vagas" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
             <Link
               href="/login"
               className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]"

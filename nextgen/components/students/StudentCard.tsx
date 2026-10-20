@@ -1,10 +1,16 @@
 "use client";
-import Link from "next/link";
 import React from "react";
 import ProposalForm from "@/components/proposals/ProposalForm";
 
+type StudentCardProfile = {
+  uid: string;
+  nome?: string;
+  instituicao?: string;
+  resumeUrl?: string;
+};
+
 type Props = {
-  student: any;
+  student: StudentCardProfile;
   canPropose?: boolean;
 };
 

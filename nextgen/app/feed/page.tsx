@@ -4,14 +4,14 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/firebase/config";
 import PostForm from "@/components/posts/PostForm";
 import PostItem from "@/components/posts/PostItem";
-import { subscribeToPosts } from "@/services/posts";
+import { subscribeToPosts, type PostRecord } from "@/services/posts";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 
 export default function FeedPage() {
 	const [user, setUser] = useState<User | null>(null);
-	const [profile, setProfile] = useState<any>(null);
-	const [posts, setPosts] = useState<any[]>([]);
+	const [profile, setProfile] = useState<Record<string, unknown> | null>(null);
+	const [posts, setPosts] = useState<PostRecord[]>([]);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
@@ -42,7 +42,7 @@ export default function FeedPage() {
 				<section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
 					<div className="space-y-6">
 						<div className="flex items-center justify-between gap-3">
-							<PostForm profile={profile} />
+							<PostForm profile={profile ?? undefined} />
 							<div className="hidden md:block">
 								{user ? (
 									<a

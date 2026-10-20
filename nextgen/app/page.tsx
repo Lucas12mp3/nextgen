@@ -1,5 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
+import { auth, db } from "@/firebase/config";
+import { subscribeVagas, type Vaga } from "@/services/vagas";
+
+const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
 const stats = [
   { value: "+8k", label: "jovens conectados" },
@@ -28,13 +38,6 @@ const benefits = [
   },
 ];
 
-const opportunities = [
-  { title: "Estágio em Tecnologia", company: "NovaTech", type: "Presencial", tag: "TI" },
-  { title: "Jovem Aprendiz em Marketing", company: "BlueWave", type: "Híbrido", tag: "Marketing" },
-  { title: "Assistente Administrativo", company: "Future Labs", type: "Remoto", tag: "Administração" },
-  { title: "Programa de Aprendizagem", company: "EduCarreira", type: "Online", tag: "Educação" },
-];
-
 const steps = [
   "Crie seu perfil com habilidades e interesses.",
   "Descubra oportunidades de estágio e aprendizado.",
@@ -42,11 +45,42 @@ const steps = [
 ];
 
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [profileType, setProfileType] = useState<string | null>(null);
+  const [vagas, setVagas] = useState<Vaga[]>([]);
+  const [selectedVaga, setSelectedVaga] = useState<Vaga | null>(null);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      setUser(u);
+
+      if (!u) {
+        setProfileType(null);
+        return;
+      }
+
+      try {
+        const snap = await getDoc(doc(db, "users", u.uid));
+        const profile = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+        setProfileType(typeof profile?.tipoConta === "string" ? profile.tipoConta : null);
+      } catch {
+        setProfileType(null);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsub = subscribeVagas((items) => setVagas(items.slice(0, 4)));
+    return () => unsub();
+  }, []);
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
       <Header />
 
-      <section className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
+      <section id="sobre" className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
         <div>
           <span className="inline-flex items-center rounded-full border border-[#b9dcff] bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#123a5a] shadow-sm">
             Conectando jovens ao futuro
@@ -69,7 +103,7 @@ export default function Home() {
               Quero começar
             </Link>
             <Link
-              href="/login"
+              href={user ? "/vagas" : "/login"}
               className="rounded-full border border-[#b9dcff] bg-white px-6 py-3 text-center text-base font-semibold text-[#123a5a] transition hover:bg-[#f4fbff]"
             >
               Ver oportunidades
@@ -83,7 +117,7 @@ export default function Home() {
                 <p>{item.label}</p>
               </div>
             ))}
-            <p className="w-full mt-2 text-xs font-semibold text-yellow-800">Dados de exemplo — não reais</p>
+            <p className="mt-2 w-full text-xs font-semibold text-yellow-800">Dados de exemplo — não reais</p>
           </div>
         </div>
 
@@ -160,27 +194,40 @@ export default function Home() {
               <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#123a5a]">Oportunidades</p>
               <h2 className="mt-3 text-3xl font-black text-[#123a5a] md:text-4xl">Descubra vagas feitas para começar</h2>
             </div>
-            <button className="rounded-full border border-[#bfdcff] bg-white px-5 py-3 text-sm font-semibold text-[#123a5a] transition hover:bg-[#edf8ff]">
+            <Link href="/vagas" className="rounded-full border border-[#bfdcff] bg-white px-5 py-3 text-sm font-semibold text-[#123a5a] transition hover:bg-[#edf8ff]">
               Ver todas
-            </button>
+            </Link>
           </div>
 
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {opportunities.map((opportunity) => (
-              <article key={opportunity.title} className="rounded-[26px] border border-[#dfeeff] bg-white p-5 shadow-[0_18px_45px_rgba(31,84,138,0.06)]">
-                <span className="inline-flex rounded-full bg-[#eaf6ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#123a5a]">
-                  {opportunity.tag}
-                </span>
-                <h3 className="mt-4 text-xl font-bold text-[#123a5a]">{opportunity.title}</h3>
-                <p className="mt-2 text-sm font-medium text-slate-500">{opportunity.company}</p>
-                <div className="mt-6 flex items-center justify-between text-sm text-slate-600">
-                  <span>{opportunity.type}</span>
-                  <button className="rounded-full bg-[#123a5a] px-3 py-1.5 font-semibold text-white transition hover:bg-[#0f2f4d]">
-                    Aplicar
-                  </button>
-                </div>
-              </article>
-            ))}
+            {vagas.length === 0 ? (
+              <div className="rounded-[26px] border border-dashed border-[#dfeeff] bg-white p-6 text-sm text-slate-600 md:col-span-2 xl:col-span-4">
+                Nenhuma vaga aberta no momento.
+              </div>
+            ) : (
+              vagas.map((vaga) => (
+                <article key={vaga.id} className="rounded-[26px] border border-[#dfeeff] bg-white p-5 shadow-[0_18px_45px_rgba(31,84,138,0.06)]">
+                  <span className="inline-flex rounded-full bg-[#eaf6ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#123a5a]">
+                    {vaga.modalidade}
+                  </span>
+                  <h3 className="mt-4 text-xl font-bold text-[#123a5a]">{vaga.titulo}</h3>
+                  <p className="mt-2 text-sm font-medium text-slate-500">{vaga.empresaNome}</p>
+                  <div className="mt-4 text-sm text-slate-600">
+                    <p>{vaga.local}</p>
+                  </div>
+                  <div className="mt-6 flex items-center justify-between text-sm text-slate-600">
+                    <span>{vaga.status}</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedVaga(vaga)}
+                      className="rounded-full bg-[#123a5a] px-3 py-1.5 font-semibold text-white transition hover:bg-[#0f2f4d]"
+                    >
+                      {profileType === "estudante" ? "Aplicar" : "Detalhes"}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -224,7 +271,7 @@ export default function Home() {
               <div className="mt-6 space-y-4">
                 <div className="rounded-2xl bg-[#f7fbff] p-4">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Vagas abertas</p>
-                  <p className="mt-2 text-3xl font-black text-[#123a5a]">18</p>
+                  <p className="mt-2 text-3xl font-black text-[#123a5a]">{vagas.length}</p>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -258,10 +305,18 @@ export default function Home() {
             <a href="#oportunidades" className="transition hover:text-[#123a5a]">Oportunidades</a>
             <a href="#empresas" className="transition hover:text-[#123a5a]">Empresas</a>
           </div>
-
-          <p>© 2026 NextGen</p>
         </div>
       </footer>
+
+      {selectedVaga && (
+        <JobModal
+          vaga={selectedVaga}
+          currentUserId={user?.uid ?? null}
+          isStudent={profileType === "estudante"}
+          onClose={() => setSelectedVaga(null)}
+          onApplied={() => setSelectedVaga(null)}
+        />
+      )}
     </main>
   );
 }

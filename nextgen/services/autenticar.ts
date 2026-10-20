@@ -28,27 +28,49 @@ export type CadastroPayload = {
   } | null;
 };
 
+export function calcularFaixaEtaria(dataNascimento?: string | null) {
+  if (!dataNascimento) return null;
+
+  const nascimento = new Date(dataNascimento);
+  if (Number.isNaN(nascimento.getTime())) return null;
+
+  const hoje = new Date();
+  let idade = hoje.getFullYear() - nascimento.getFullYear();
+  const mes = hoje.getMonth() - nascimento.getMonth();
+
+  if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
+    idade -= 1;
+  }
+
+  return idade > 0 ? `${idade} anos` : "Menor de 1 ano";
+}
+
 export async function cadastrar(payload: CadastroPayload) {
   const { nome, email, senha, tipoConta, cpf, cnpj, dataNascimento, ramo, responsavel } = payload;
 
   const cred = await createUserWithEmailAndPassword(auth, email, senha);
   await updateProfile(cred.user, { displayName: nome });
 
-  // grava documento do perfil no Firestore
-  const profileDoc = {
+  const publicProfileDoc = {
     uid: cred.user.uid,
     nome,
     email,
     tipoConta,
+    ramo: ramo ?? null,
+    faixaEtaria: dataNascimento ? calcularFaixaEtaria(dataNascimento) : null,
+    createdAt: serverTimestamp(),
+  };
+
+  const privateProfileDoc = {
     cpf: cpf ?? null,
     cnpj: cnpj ?? null,
     dataNascimento: dataNascimento ?? null,
-    ramo: ramo ?? null,
     responsavel: responsavel ?? null,
     createdAt: serverTimestamp(),
   };
 
-  await setDoc(doc(db, "users", cred.user.uid), profileDoc);
+  await setDoc(doc(db, "users", cred.user.uid), publicProfileDoc);
+  await setDoc(doc(db, "users", cred.user.uid, "privado", "dados"), privateProfileDoc);
 
   return cred.user;
 }

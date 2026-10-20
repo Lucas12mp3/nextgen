@@ -84,7 +84,7 @@ export default function CadastroPage() {
     }
 
     try {
-      const payload = {
+      const payload: import("@/services/autenticar").CadastroPayload = {
         nome,
         email,
         senha,
@@ -97,7 +97,7 @@ export default function CadastroPage() {
           tipoConta === "estudante" && respNome
             ? { nome: respNome, email: respEmail, cpf: respCpf.replace(/\D/g, "") }
             : null,
-      } as any;
+      };
 
       await cadastrar(payload);
       // redireciona para o perfil conforme o tipo de conta

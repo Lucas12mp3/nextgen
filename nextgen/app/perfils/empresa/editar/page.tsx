@@ -14,6 +14,8 @@ export default function EditarPerfilEmpresa() {
   const [descricao, setDescricao] = useState("");
   const [site, setSite] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [tagline, setTagline] = useState("");
+  const [localizacao, setLocalizacao] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState("");
@@ -30,12 +32,14 @@ export default function EditarPerfilEmpresa() {
         try {
           const snap = await getDoc(doc(db, "users", u.uid));
           if (snap.exists()) {
-            const p: any = snap.data();
-            setNome(p.nome || "");
-            setRamo(p.ramo || "");
-            setDescricao(p.descricao || "");
-            setSite(p.site || "");
-            setLinkedin(p.linkedin || "");
+            const p = snap.data() as Record<string, unknown>;
+            setNome(typeof p.nome === "string" ? p.nome : "");
+            setRamo(typeof p.ramo === "string" ? p.ramo : "");
+            setDescricao(typeof p.descricao === "string" ? p.descricao : "");
+            setSite(typeof p.site === "string" ? p.site : "");
+            setLinkedin(typeof p.linkedin === "string" ? p.linkedin : "");
+            setTagline(typeof p.tagline === "string" ? p.tagline : "");
+            setLocalizacao(typeof p.localizacao === "string" ? p.localizacao : "");
           }
         } catch (err) {
           console.error("Erro ao carregar perfil:", err);
@@ -60,7 +64,7 @@ export default function EditarPerfilEmpresa() {
         resumeUrl = url;
       }
 
-      const data: any = { nome, ramo, descricao, site, linkedin };
+      const data: Record<string, string | null> = { nome, ramo, descricao, site, linkedin, tagline, localizacao };
       if (resumeUrl) data.resumeUrl = resumeUrl;
       await updateProfileDoc(user.uid, data);
       setMensagem("Perfil atualizado com sucesso.");
@@ -85,6 +89,31 @@ export default function EditarPerfilEmpresa() {
           <div>
             <label className="block text-sm font-semibold text-slate-700">Ramo</label>
             <input value={ramo} onChange={(e) => setRamo(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">Descrição</label>
+            <textarea value={descricao} onChange={(e) => setDescricao(e.target.value)} rows={4} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">Tagline</label>
+            <input value={tagline} onChange={(e) => setTagline(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">Localização</label>
+            <input value={localizacao} onChange={(e) => setLocalizacao(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">Site</label>
+            <input value={site} onChange={(e) => setSite(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700">LinkedIn</label>
+            <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
           </div>
 
           <div>

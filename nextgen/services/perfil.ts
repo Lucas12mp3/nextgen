@@ -1,5 +1,5 @@
 import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { storage, db } from "@/firebase/config";
 
 /**
@@ -52,7 +52,7 @@ export async function uploadResume(
  */
 export async function updateProfileDoc(
   uid: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ): Promise<void> {
   const userDocRef = doc(db, "users", uid);
 
