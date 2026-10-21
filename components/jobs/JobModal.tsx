@@ -47,7 +47,12 @@ export default function JobModal({ vaga, currentUserId, isStudent = false, onClo
   async function handleApply() {
     const userId = currentUserId;
 
-    if (!userId || !isStudent) {
+    if (!userId) {
+      setError("Você precisa entrar na sua conta antes de se candidatar.");
+      return;
+    }
+
+    if (!isStudent) {
       setError("Você precisa entrar como estudante para se candidatar.");
       return;
     }

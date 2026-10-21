@@ -9,7 +9,7 @@ import {
   updateDoc,
   where,
 } from "firebase/firestore";
-import { db } from "@/firebase/config";
+import { auth, db } from "@/firebase/config";
 
 export type ApplicationData = {
   fromUserId: string;
@@ -27,8 +27,19 @@ export type ApplicationData = {
 export type ApplicationRecord = ApplicationData & { id: string };
 
 export async function sendApplication(payload: ApplicationData) {
+  const currentUser = auth.currentUser;
+
+  if (!currentUser) {
+    throw new Error("Você precisa estar autenticado para se candidatar.");
+  }
+
+  if (currentUser.uid !== payload.fromUserId) {
+    throw new Error("A candidatura deve ser enviada pela conta do usuário atual.");
+  }
+
   const ref = await addDoc(collection(db, "applications"), {
     ...payload,
+    fromUserName: payload.fromUserName ?? currentUser.displayName ?? currentUser.email ?? "Candidato",
     status: payload.status ?? "pending",
     createdAt: serverTimestamp(),
     read: false,

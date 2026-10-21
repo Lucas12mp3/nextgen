@@ -68,6 +68,8 @@ export default function Header() {
       </nav>
 
       <div className="flex items-center justify-end gap-3">
+        {user && <NotificationsButton />}
+
         {user ? (
           <div ref={menuRef} className="relative">
             <button
