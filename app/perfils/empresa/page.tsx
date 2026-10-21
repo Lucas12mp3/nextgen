@@ -10,6 +10,7 @@ import StudentCard from "@/components/students/StudentCard";
 import { RequireProfileType } from "@/components/auth/RequireProfileType";
 import JobForm from "@/components/jobs/JobForm";
 import { fecharVaga, subscribeVagasEmpresa, type Vaga } from "@/services/vagas";
+import { subscribeRankingGeral, type RankingItem } from "@/services/desafios";
 
 const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
@@ -36,6 +37,7 @@ export default function PerfilEmpresaPage() {
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [selectedJob, setSelectedJob] = useState<Vaga | null>(null);
   const [students, setStudents] = useState<StudentSummary[]>([]);
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [challengeCounts, setChallengeCounts] = useState<Record<string, number>>({});
   const router = useRouter();
 
@@ -68,8 +70,12 @@ export default function PerfilEmpresaPage() {
   }, []);
 
   useEffect(() => {
+    const unsub = subscribeRankingGeral((items) => setRanking(items));
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     if (!students.length) {
-      setChallengeCounts({});
       return;
     }
 
@@ -176,11 +182,40 @@ export default function PerfilEmpresaPage() {
           </section>
 
           <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
+            <h3 className="text-sm font-bold text-[#123a5a]">Ranking por pontos</h3>
+            <div className="mt-4 space-y-3">
+              {ranking.slice(0, 5).map((item, index) => (
+                <div key={item.userId} className="flex items-center justify-between gap-3 rounded-[16px] border border-[#eaf4ff] bg-[#f9fcff] p-3">
+                  <div>
+                    <p className="text-sm font-black text-[#123a5a]">#{index + 1} {item.nome}</p>
+                    <p className="text-[11px] text-slate-500">{item.instituicao}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-700">{item.totalPontos} pts</p>
+                    <p className="text-[10px] text-slate-500">{item.desafiosConcluidos} desafios</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-[#123a5a]">Estudantes em destaque</h3>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {students.slice(0, 6).map((s) => (
-                <StudentCard key={s.uid} student={s} canPropose challengeCount={challengeCounts[s.uid] ?? 0} />
-              ))}
+              {students.slice(0, 6).map((s) => {
+                const rankingData = ranking.find((item) => item.userId === s.uid);
+                const position = ranking.findIndex((item) => item.userId === s.uid) + 1;
+                return (
+                  <StudentCard
+                    key={s.uid}
+                    student={s}
+                    canPropose
+                    challengeCount={challengeCounts[s.uid] ?? 0}
+                    totalPoints={rankingData?.totalPontos ?? 0}
+                    rankingPosition={position > 0 ? position : undefined}
+                  />
+                );
+              })}
             </div>
           </section>
         </div>

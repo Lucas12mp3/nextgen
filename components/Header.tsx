@@ -1,14 +1,17 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, signOut as firebaseSignOut, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import NotificationsButton from "@/components/proposals/NotificationsButton";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
   const [profileType, setProfileType] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -28,45 +31,100 @@ export default function Header() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   async function handleSignOut() {
     try {
       await firebaseSignOut(auth);
+      setMenuOpen(false);
     } catch (err) {
       console.error(err);
     }
   }
 
+  const firstLetter = user?.displayName?.trim()?.[0] ?? user?.email?.trim()?.[0] ?? "N";
+
   return (
     <header className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-6 lg:px-10">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#9ad4ff] via-[#6fa8dc] to-[#123a5a] text-xl font-black text-white shadow-lg shadow-blue-200">N</div>
-        <div>
-          <p className="text-lg font-black tracking-tight text-[#123a5a]">NextGen</p>
-        </div>
-      </div>
+      <Link href="/" className="group flex items-center transition-transform duration-300 hover:scale-[1.02]">
+        <BrandLogo compact showWordmark className="group-hover:drop-shadow-[0_8px_24px_rgba(36,113,190,0.18)]" />
+      </Link>
 
-      <nav className="hidden items-center gap-8 text-sm font-medium text-slate-700 md:flex">
-        <Link href="/" className="transition hover:text-[#123a5a]">Início</Link>
-        <Link href="/vagas" className="transition hover:text-[#123a5a]">Vagas</Link>
-        <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>
-        <a href="#beneficios" className="transition hover:text-[#123a5a]">Benefícios</a>
-        <a href="#oportunidades" className="transition hover:text-[#123a5a]">Oportunidades</a>
-        <a href="#empresas" className="transition hover:text-[#123a5a]">Empresas</a>
+      <nav className="hidden items-center gap-5 text-sm font-medium text-slate-700 md:flex">
+        <Link href="/" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Início</Link>
+        <Link href="/vagas" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Vagas</Link>
+        <Link href="/desafios" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Desafios</Link>
+        <Link href="/ranking" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Ranking</Link>
+        <Link href="/feed" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Feed</Link>
       </nav>
 
       <div className="flex items-center justify-end gap-3">
         {user ? (
-          <>
-            <Link href="/feed" className="inline-flex items-center justify-center rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Feed</Link>
-            <Link href="/vagas" className="inline-flex items-center justify-center rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
-            <Link href="/desafios" className="inline-flex items-center justify-center rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Desafios</Link>
-            <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="inline-flex items-center justify-center rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]">Meu perfil</Link>
-            <NotificationsButton />
-            <button onClick={handleSignOut} className="rounded-full bg-red-50 px-3 py-1 text-sm font-medium text-red-700">Sair</button>
-          </>
+          <div ref={menuRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              className="flex items-center gap-3 rounded-full border border-[#cfe8ff] bg-white px-2 py-1.5 shadow-sm transition hover:border-[#9ad4ff]"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#123a5a] to-[#3c82c1] text-sm font-bold text-white">
+                {firstLetter.toUpperCase()}
+              </span>
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-14 z-50 w-72 overflow-hidden rounded-2xl border border-[#1f2a37] bg-[#141b23] text-slate-100 shadow-2xl shadow-slate-900/40">
+                <div className="border-b border-[#27313d] px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#123a5a] to-[#5da5ec] text-sm font-bold text-white">
+                      {firstLetter.toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{user.displayName || user.email || "Usuário"}</p>
+                      <p className="text-xs text-slate-400">{profileType === "empresa" ? "Empresa" : "Estudante"}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1 p-2">
+                  <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
+                    <span>Meu perfil</span>
+                    <span>→</span>
+                  </Link>
+                  <Link href="/feed" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
+                    <span>Feed</span>
+                    <span>→</span>
+                  </Link>
+                  <Link href="/desafios" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
+                    <span>Desafios</span>
+                    <span>→</span>
+                  </Link>
+                  <Link href="/ranking" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
+                    <span>Ranking</span>
+                    <span>→</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="mt-2 flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm text-red-300 transition hover:bg-[#1d2733]"
+                  >
+                    <span>Sair</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         ) : (
           <>
-            <Link href="/vagas" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]">Vagas</Link>
             <Link
               href="/login"
               className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:border-[#9ad4ff] hover:bg-[#f5fbff]"

@@ -35,11 +35,20 @@ export default function AplicacaoPage() {
         <p className="text-gray-400 text-sm mb-6">
           Só usuários logados chegam até aqui.
         </p>
-        <button
-          onClick={() => sair().then(() => router.push("/"))}
-          className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg border border-gray-700 transition-colors">
-          Sair
-        </button>
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => router.push("/feed")}
+            className="w-full py-2.5 bg-[#123a5a] hover:bg-[#0f2f4d] text-white font-semibold rounded-lg border border-[#1e4a70] transition-colors">
+            Ir para o feed
+          </button>
+          <button
+            type="button"
+            onClick={() => sair().then(() => router.push("/"))}
+            className="w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-lg border border-gray-700 transition-colors">
+            Sair
+          </button>
+        </div>
       </div>
     </main>
   );

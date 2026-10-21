@@ -62,8 +62,6 @@ export default function DesafioDetalhePage() {
 
   useEffect(() => {
     if (!desafioId) {
-      setDesafio(null);
-      setError("Desafio não encontrado.");
       return;
     }
 
@@ -169,6 +167,20 @@ export default function DesafioDetalhePage() {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
         <p className="text-sm font-medium text-slate-600">Carregando desafio...</p>
+      </main>
+    );
+  }
+
+  if (!desafioId) {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] p-6 text-slate-800">
+        <div className="mx-auto max-w-xl rounded-[24px] border border-[#dfeeff] bg-white p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-black text-[#123a5a]">Desafio indisponível</h1>
+          <p className="mt-3 text-sm text-slate-600">Desafio não encontrado.</p>
+          <Link href="/desafios" className="mt-5 inline-flex rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white">
+            Voltar aos desafios
+          </Link>
+        </div>
       </main>
     );
   }

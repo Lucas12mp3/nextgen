@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cadastrar } from "@/services/autenticar";
+import BrandLogo from "@/components/BrandLogo";
 
 export default function CadastroPage() {
   const [nome, setNome] = useState("");
@@ -197,12 +198,7 @@ export default function CadastroPage() {
       <div className="mx-auto grid max-w-5xl overflow-hidden rounded-[32px] border border-[#dfeeff] bg-white/80 shadow-[0_24px_80px_rgba(31,84,138,0.12)] backdrop-blur-sm lg:grid-cols-[1fr_1.1fr]">
         <section className="hidden bg-gradient-to-br from-[#dfeeff] via-[#cfe8ff] to-[#b8d9ff] p-10 lg:flex lg:flex-col lg:justify-between">
           <div>
-            <div className="mb-6 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#9ad4ff] via-[#6fa8dc] to-[#123a5a] text-xl font-black text-white shadow-lg shadow-blue-200">
-                N
-              </div>
-              <span className="text-2xl font-black tracking-tight text-[#123a5a]">NextGen</span>
-            </div>
+            <BrandLogo compact className="mb-6" textClassName="!text-[2rem]" />
 
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#123a5a]">Comece agora</p>
             <h1 className="mt-5 max-w-sm text-4xl font-black leading-tight text-[#123a5a]">

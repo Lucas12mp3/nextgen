@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { auth, db } from "@/firebase/config";
 import { subscribeVagas, type Vaga } from "@/services/vagas";
+import BrandLogo from "@/components/BrandLogo";
 
 const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
@@ -82,9 +83,14 @@ export default function Home() {
 
       <section id="sobre" className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
         <div>
-          <span className="inline-flex items-center rounded-full border border-[#b9dcff] bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#123a5a] shadow-sm">
+          <div className="inline-flex items-center rounded-full border border-[#b9dcff] bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#123a5a] shadow-sm backdrop-blur-sm">
+            <BrandLogo compact showWordmark={false} className="mr-2" />
             Conectando jovens ao futuro
-          </span>
+          </div>
+
+          <div className="mt-6 animate-[heroBrandFloat_5s_ease-in-out_infinite]">
+            <BrandLogo className="justify-center md:justify-start" textClassName="!text-[3.2rem] md:!text-[5.5rem] lg:!text-[7rem]" />
+          </div>
 
           <h1 className="mt-6 max-w-xl text-4xl font-black leading-tight tracking-tight text-[#123a5a] md:text-5xl lg:text-6xl">
             O lugar onde jovens aprendem, crescem e encontram oportunidades.
@@ -125,7 +131,7 @@ export default function Home() {
           <div className="absolute -left-8 top-10 h-40 w-40 rounded-full bg-[#a9d6ff]/70 blur-3xl" />
           <div className="absolute -right-10 bottom-6 h-40 w-40 rounded-full bg-[#ffd166]/40 blur-3xl" />
 
-          <div className="relative overflow-hidden rounded-[32px] border border-[#d7ebff] bg-white/80 p-5 shadow-[0_24px_80px_rgba(31,84,138,0.14)] backdrop-blur-sm">
+          <div className="home-spotlight relative overflow-hidden rounded-[32px] border border-[#d7ebff] bg-white/80 p-5 shadow-[0_24px_80px_rgba(31,84,138,0.14)] backdrop-blur-sm">
             <div className="absolute right-4 top-4 rounded-full bg-yellow-50/90 px-3 py-1 text-xs font-semibold text-yellow-800 ring-1 ring-yellow-100">Dados de exemplo — não reais</div>
             <div className="rounded-[24px] bg-gradient-to-br from-[#eaf6ff] via-[#dfeeff] to-[#cfe8ff] p-5">
               <div className="flex items-center justify-between">
@@ -176,7 +182,7 @@ export default function Home() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           {benefits.map((benefit) => (
-            <article key={benefit.title} className="rounded-[28px] border border-[#dfeeff] bg-white p-7 shadow-[0_18px_45px_rgba(31,84,138,0.08)] transition hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(31,84,138,0.12)]">
+            <article key={benefit.title} className="benefit-card rounded-[28px] border border-[#dfeeff] bg-white p-7 shadow-[0_18px_45px_rgba(31,84,138,0.08)] transition duration-300 hover:-translate-y-2 hover:shadow-[0_22px_50px_rgba(31,84,138,0.12)]">
               <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#eaf6ff] text-2xl shadow-sm">
                 {benefit.icon}
               </div>
@@ -292,12 +298,7 @@ export default function Home() {
 
       <footer className="border-t border-[#dfeeff] bg-white/80">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8 text-sm text-slate-600 md:flex-row md:items-center md:justify-between lg:px-10">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#9ad4ff] via-[#6fa8dc] to-[#123a5a] text-lg font-black text-white">
-              N
-            </div>
-            <span className="font-black text-[#123a5a]">NextGen</span>
-          </div>
+          <BrandLogo compact className="items-center" />
 
           <div className="flex flex-wrap gap-5">
             <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>

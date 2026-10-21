@@ -6,7 +6,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { RequireProfileType } from "@/components/auth/RequireProfileType";
-import { subscribeConquistas, type Conquista } from "@/services/desafios";
+import { calcularPontosDesafio, subscribeConquistas, subscribeRankingGeral, type Conquista, type RankingItem } from "@/services/desafios";
 
 type StudentProfile = {
   nome?: string;
@@ -32,6 +32,7 @@ export default function PerfilEstudantePage() {
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [privateProfile, setPrivateProfile] = useState<PrivateStudentProfile | null>(null);
   const [conquistas, setConquistas] = useState<Conquista[]>([]);
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -61,8 +62,18 @@ export default function PerfilEstudantePage() {
     return () => unsub();
   }, [user?.uid]);
 
+  useEffect(() => {
+    const unsub = subscribeRankingGeral((items) => setRanking(items));
+    return () => unsub();
+  }, []);
+
   const skills = Array.isArray(profile?.skills) ? profile.skills : [];
   const titulo = profile?.titulo || "Estudante";
+  const totalPontos = conquistas.reduce(
+    (soma, item) => soma + (typeof item.pontos === "number" ? item.pontos : calcularPontosDesafio(item.nivel, item.nota)),
+    0
+  );
+  const posicaoRanking = ranking.findIndex((item) => item.userId === user?.uid) + 1;
   const idadeTexto =
     profile?.faixaEtaria ??
     (privateProfile?.dataNascimento
@@ -171,6 +182,14 @@ export default function PerfilEstudantePage() {
                     <span className="font-semibold text-[#123a5a]">{skills.length}</span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
+                    <span>Pontos</span>
+                    <span className="font-semibold text-emerald-700">{totalPontos} pts</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Ranking</span>
+                    <span className="font-semibold text-[#123a5a]">{posicaoRanking > 0 ? `#${posicaoRanking}` : "—"}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
                     <span>Feed</span>
                     <Link href="/feed" className="font-semibold text-[#123a5a] underline">Abrir</Link>
                   </div>
@@ -194,13 +213,28 @@ export default function PerfilEstudantePage() {
                         <p className="text-sm font-black text-[#123a5a]">{item.desafioTitulo}</p>
                         <p className="mt-1 text-[11px] text-slate-500">{item.empresaNome} • {item.nivel}</p>
                         <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
-                          <span className="font-semibold text-emerald-700">Nota: {item.nota}%</span>
+                          <span className="font-semibold text-emerald-700">{typeof item.pontos === "number" ? `${item.pontos} pts` : `Nota: ${item.nota}%`}</span>
                           <span className="text-slate-500">{formatarData(item.createdAt)}</span>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-black text-[#123a5a]">Ranking geral</h2>
+                <div className="mt-4 space-y-3">
+                  {ranking.slice(0, 5).map((item, index) => (
+                    <div key={item.userId} className={`flex items-center justify-between gap-3 rounded-2xl border p-3 ${user?.uid === item.userId ? "border-[#9ad4ff] bg-[#edf8ff]" : "border-[#eaf4ff] bg-[#f9fcff]"}`}>
+                      <div>
+                        <p className="text-sm font-black text-[#123a5a]">#{index + 1} {item.nome}</p>
+                        <p className="text-[11px] text-slate-500">{item.instituicao}</p>
+                      </div>
+                      <span className="text-sm font-bold text-emerald-700">{item.totalPontos} pts</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </aside>
           </section>

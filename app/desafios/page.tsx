@@ -7,8 +7,10 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import {
   calcularNota,
+  calcularPontosDesafio,
   concluirDesafio,
   criarDesafio,
+  PONTOS_POR_NIVEL,
   subscribeConquistas,
   subscribeDesafiosAbertos,
   subscribeDesafiosEmpresa,
@@ -97,7 +99,6 @@ export default function DesafiosPage() {
       };
     }
 
-    setDesafios([]);
     return undefined;
   }, [user, tipoConta]);
 
@@ -363,7 +364,10 @@ export default function DesafiosPage() {
                         <span className="rounded-full bg-[#eaf6ff] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#123a5a]">{desafio.status}</span>
                       </div>
                       <p className="mt-2 text-sm text-slate-700">{desafio.descricao}</p>
-                      <p className="mt-2 text-xs font-semibold text-[#123a5a]">Nota mínima: {desafio.notaMinima}%</p>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-[#123a5a]">
+                        <span>Nota mínima: {desafio.notaMinima}%</span>
+                        <span className="rounded-full bg-[#eaf6ff] px-2 py-1">{desafio.pontos ?? PONTOS_POR_NIVEL[desafio.nivel]} pts</span>
+                      </div>
                     </div>
                   ))
                 )}
@@ -395,14 +399,19 @@ export default function DesafiosPage() {
                           <span className="rounded-full bg-[#eaf6ff] px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#123a5a]">{desafio.notaMinima}%</span>
                         </div>
                         <p className="mt-2 text-sm text-slate-700">{desafio.descricao}</p>
-                        <div className="mt-3 flex justify-end">
-                          {jaFeito ? (
-                            <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Concluído</span>
-                          ) : (
-                            <Link href={`/desafios/${desafio.id}`} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white">
-                              Responder
-                            </Link>
-                          )}
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <span className="rounded-full bg-[#eaf6ff] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-[#123a5a]">
+                            {desafio.pontos ?? calcularPontosDesafio(desafio.nivel)} pts
+                          </span>
+                          <div className="flex justify-end">
+                            {jaFeito ? (
+                              <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">Concluído</span>
+                            ) : (
+                              <Link href={`/desafios/${desafio.id}`} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white">
+                                Responder
+                              </Link>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
