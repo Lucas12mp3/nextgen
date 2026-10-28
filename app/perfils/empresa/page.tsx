@@ -20,20 +20,19 @@ type CompanyProfile = Record<string, unknown> & {
   localizacao?: string;
   site?: string;
   linkedin?: string;
-  resumeUrl?: string;
 };
 
 type StudentSummary = Record<string, unknown> & {
   uid: string;
   nome?: string;
   instituicao?: string;
-  resumeUrl?: string;
 };
 
 export default function PerfilEmpresaPage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
+  const companyPending = profile?.tipoConta === "empresa" && profile?.companyStatus !== "verified";
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [selectedJob, setSelectedJob] = useState<Vaga | null>(null);
   const [students, setStudents] = useState<StudentSummary[]>([]);
@@ -125,9 +124,6 @@ export default function PerfilEmpresaPage() {
                   <Link href={profile?.linkedin || "#"} className="text-sm text-[#123a5a] underline">LinkedIn</Link>
                   <Link href="/perfils/empresa/editar" className="rounded-full bg-[#123a5a] px-3 py-1 text-xs font-semibold text-white">Editar perfil</Link>
                   <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Ir para o feed</Link>
-                  {profile?.resumeUrl && (
-                    <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="rounded-full border border-[#cfe8ff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Visualizar documento</a>
-                  )}
                 </div>
               </div>
             </div>
@@ -149,8 +145,7 @@ export default function PerfilEmpresaPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-[#123a5a]">Mural de vagas</h3>
               <Link href="/desafios" className="text-xs font-semibold text-[#123a5a] underline">Gerenciar desafios</Link>
-            </div>
-            <JobForm />
+            </div>            {companyPending ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Sua empresa aguarda aprovação administrativa. A publicação de vagas, propostas e desafios fica bloqueada até a aprovação.</p> : <JobForm />}
           </section>
 
           <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
@@ -209,7 +204,7 @@ export default function PerfilEmpresaPage() {
                   <StudentCard
                     key={s.uid}
                     student={s}
-                    canPropose
+                    canPropose={profile?.companyStatus === "verified"}
                     challengeCount={challengeCounts[s.uid] ?? 0}
                     totalPoints={rankingData?.totalPontos ?? 0}
                     rankingPosition={position > 0 ? position : undefined}

@@ -6,10 +6,9 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import {
-  calcularNota,
   calcularPontosDesafio,
-  concluirDesafio,
   criarDesafio,
+  enviarTentativa,
   PONTOS_POR_NIVEL,
   subscribeConquistas,
   subscribeDesafiosAbertos,
@@ -17,7 +16,7 @@ import {
   type Conquista,
   type Desafio,
   type DesafioNivel,
-  type Pergunta,
+  type PerguntaComGabarito,
 } from "@/services/desafios";
 
 type PerfilTipo = "empresa" | "estudante" | null;
@@ -156,9 +155,9 @@ export default function DesafiosPage() {
           enunciado: pergunta.enunciado.trim(),
           opcoes: opcoesValidas,
           correta: finalCorreta,
-        } satisfies Pergunta;
+        } satisfies PerguntaComGabarito;
       })
-      .filter(Boolean) as Pergunta[];
+      .filter(Boolean) as PerguntaComGabarito[];
 
     if (!titulo.trim() || !descricao.trim() || !area.trim() || perguntasValidadas.length === 0) {
       setFeedback({ type: "error", message: "Preencha todos os campos e inclua pelo menos uma pergunta válida." });
@@ -197,24 +196,14 @@ export default function DesafiosPage() {
 
   async function handleResponderDesafio() {
     if (!selectedDesafio || !user || tipoConta !== "estudante") return;
-
     const respostasPendentes = selectedDesafio.perguntas.some((_, index) => respostas[index] === undefined || respostas[index] < 0);
-    if (respostasPendentes) {
-      setQuizError("Responda todas as perguntas antes de enviar.");
-      return;
-    }
-
-    const nota = calcularNota(selectedDesafio.perguntas, respostas);
-    const aprovado = await concluirDesafio(user.uid, selectedDesafio, nota);
-
-    setResultado({ nota, aprovado });
-    setQuizError("");
-
-    if (!aprovado) {
-      setFeedback({ type: "error", message: `Você ficou com ${nota}% e não atingiu a nota mínima de ${selectedDesafio.notaMinima}%.` });
-    } else {
-      setFeedback({ type: "success", message: `Parabéns! Você acertou ${nota}% e ganhou a conquista.` });
-    }
+    if (respostasPendentes) { setQuizError("Responda todas as perguntas antes de enviar."); return; }
+    try {
+      const result = await enviarTentativa(selectedDesafio.id, selectedDesafio.perguntas.map((_, index) => respostas[index]));
+      setResultado({ nota: result.nota, aprovado: result.aprovado });
+      setQuizError("");
+      setFeedback(result.aprovado ? { type: "success", message: `Parabéns! Nota ${result.nota}% e conquista registrada.` } : { type: "error", message: `Nota ${result.nota}%; não atingiu a nota mínima de ${selectedDesafio.notaMinima}%.` });
+    } catch (err) { setQuizError(err instanceof Error ? err.message : "Não foi possível enviar as respostas."); }
   }
 
   if (loading) {

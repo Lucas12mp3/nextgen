@@ -6,10 +6,11 @@ import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { subscribeUserProposals, markProposalRead, respondProposal } from "@/services/proposals";
 import { subscribeCompanyApplications, markApplicationRead, updateApplicationStatus } from "@/services/applications";
+import { getResumeUrl } from "@/services/perfil";
 
 type ProfileData = Record<string, unknown> & { tipoConta?: "estudante" | "empresa" };
 type ProposalItem = Record<string, unknown> & { id: string; fromCompanyName?: string; role?: string; message?: string; read?: boolean; };
-type ApplicationItem = Record<string, unknown> & { id: string; fromUserName?: string; role?: string; status?: string; message?: string; read?: boolean; };
+type ApplicationItem = Record<string, unknown> & { id: string; fromUserId?: string; fromUserName?: string; role?: string; status?: string; message?: string; read?: boolean; };
 
 export default function NotificationsPage() {
   const [user, setUser] = useState<User | null>(null);
@@ -75,6 +76,12 @@ export default function NotificationsPage() {
     await markApplicationRead(id);
   }
 
+  async function handleOpenResume(studentUid?: string) {
+    if (!studentUid) return;
+    try { const url = await getResumeUrl(studentUid); window.open(url, "_blank", "noopener,noreferrer"); }
+    catch (err) { alert(err instanceof Error ? err.message : "Não foi possível abrir o currículo."); }
+  }
+
   async function handleApplicationStatus(id: string, status: string) {
     const normalizedStatus = status as "pending" | "reviewed" | "rejected" | "hired";
     await updateApplicationStatus(id, normalizedStatus);
@@ -117,6 +124,7 @@ export default function NotificationsPage() {
                           <p className="mt-2 text-sm text-slate-700">{it.message}</p>
                         </div>
                         <div className="flex min-w-[150px] flex-col gap-2">
+                          <button onClick={() => handleOpenResume(it.fromUserId)} className="rounded-full bg-[#123a5a] px-2 py-1.5 text-sm font-medium text-white">Ver currículo</button>
                           <button onClick={() => handleMarkApplicationRead(it.id)} className="rounded-full bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-700">Marcar lida</button>
                           <select
                             value={it.status || "pending"}

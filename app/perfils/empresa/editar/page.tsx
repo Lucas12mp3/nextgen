@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
-import { uploadResume, updateProfileDoc } from "@/services/perfil";
+import { updateProfileDoc } from "@/services/perfil";
 
 export default function EditarPerfilEmpresa() {
   const [user, setUser] = useState<User | null>(null);
@@ -17,8 +17,6 @@ export default function EditarPerfilEmpresa() {
   const [linkedin, setLinkedin] = useState("");
   const [tagline, setTagline] = useState("");
   const [localizacao, setLocalizacao] = useState("");
-  const [resumeFile, setResumeFile] = useState<File | null>(null);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState("");
   const router = useRouter();
 
@@ -59,14 +57,8 @@ export default function EditarPerfilEmpresa() {
     if (!user) return;
     setMensagem("");
     try {
-      let resumeUrl: string | null = null;
-      if (resumeFile) {
-        const url = await uploadResume(user.uid, resumeFile, (p) => setUploadProgress(p));
-        resumeUrl = url;
-      }
 
       const data: Record<string, string | null> = { nome, ramo, descricao, site, linkedin, tagline, localizacao };
-      if (resumeUrl) data.resumeUrl = resumeUrl;
       await updateProfileDoc(user.uid, data);
       setMensagem("Perfil atualizado com sucesso.");
       router.push("/perfils/empresa");
@@ -125,12 +117,6 @@ export default function EditarPerfilEmpresa() {
           <div>
             <label className="block text-sm font-semibold text-slate-700">LinkedIn</label>
             <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">Enviar documento/ apresentação (PDF)</label>
-            <input type="file" accept="application/pdf" onChange={(e) => setResumeFile(e.target.files?.[0] ?? null)} className="mt-2" />
-            {uploadProgress !== null && <p className="text-sm text-slate-600 mt-2">Upload: {uploadProgress}%</p>}
           </div>
 
           <div className="flex gap-3">

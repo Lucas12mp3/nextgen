@@ -1,131 +1,96 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId}/privado/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    function signedIn() { return request.auth != null; }
+    function verifiedCompany(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid))
+        && get(/databases/$(database)/documents/users/$(uid)).data.tipoConta == "empresa"
+        && get(/databases/$(database)/documents/users/$(uid)).data.companyStatus == "verified";
     }
 
-    // Users: each user document keyed by UID
+    // These documents are directory-safe only after the one-time migration removes email/resumeUrl.
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false; // account deletion handled via Admin SDK or Authentication flows
+      allow read: if signedIn();
+      allow create, update, delete: if false; // trusted Functions only
+      match /privado/{document=**} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow write: if false; // trusted Functions only
+      }
     }
+    match /admins/{adminId} { allow read, write: if false; }
+    match /resumeAccess/{studentUid}/companies/{companyUid} { allow read, write: if false; }
+    match /desafioSegredos/{challengeId} { allow read, write: if false; }
 
     match /vagas/{vagaId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.empresaId == request.auth.uid
-        && request.resource.data.empresaNome is string
-        && request.resource.data.titulo is string
-        && request.resource.data.descricao is string
-        && request.resource.data.requisitos is string
-        && request.resource.data.modalidade is string
-        && request.resource.data.local is string
+      allow read: if signedIn();
+      allow create, delete: if false; // created by Functions
+      allow update: if signedIn() && resource.data.empresaId == request.auth.uid
+        && verifiedCompany(request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
         && request.resource.data.status in ["aberta", "fechada"];
-      allow update, delete: if request.auth != null && resource.data.empresaId == request.auth.uid;
     }
 
-    // Posts collection
     match /posts/{postId} {
-      allow read: if true; // public feed
-
-      allow create: if request.auth != null
+      allow read: if true;
+      allow create: if signedIn()
         && request.resource.data.authorId == request.auth.uid
         && request.resource.data.content is string
         && request.resource.data.content.size() > 0
-        && (request.resource.data.kind in ["post","vaga","evento"]);
-
-      allow update: if request.auth != null && (
-        (
-          resource.data.authorId == request.auth.uid
+        && request.resource.data.kind in ["post", "vaga", "evento"]
+        && (request.resource.data.kind != "vaga" || verifiedCompany(request.auth.uid));
+      allow update: if signedIn() && (
+        (resource.data.authorId == request.auth.uid
           && request.resource.data.authorId == resource.data.authorId
-          && request.resource.data.content is string
-        )
-        || (
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likes", "likesCount", "commentsCount"])
+          && request.resource.data.kind == resource.data.kind
+          && (resource.data.kind != "vaga" || verifiedCompany(request.auth.uid))
+          && request.resource.data.content is string)
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["likes", "likesCount", "commentsCount"])
           && request.resource.data.authorId == resource.data.authorId
           && request.resource.data.content == resource.data.content
-          && request.resource.data.kind == resource.data.kind
-        )
+          && request.resource.data.kind == resource.data.kind)
       );
-
-      allow delete: if request.auth != null && resource.data.authorId == request.auth.uid;
-
-      // Comments subcollection
+      allow delete: if signedIn() && resource.data.authorId == request.auth.uid;
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if request.auth != null
-          && request.resource.data.authorId == request.auth.uid
-          && request.resource.data.content is string
-          && request.resource.data.content.size() > 0;
-        allow update, delete: if request.auth != null && resource.data.authorId == request.auth.uid;
+        allow create: if signedIn() && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.content is string && request.resource.data.content.size() > 0;
+        allow update, delete: if signedIn() && resource.data.authorId == request.auth.uid;
       }
     }
 
-    // Applications
     match /applications/{applicationId} {
-      allow read: if request.auth != null && (resource.data.fromUserId == request.auth.uid || resource.data.toCompanyId == request.auth.uid);
-      allow create: if request.auth != null
-        && request.resource.data.fromUserId == request.auth.uid
-        && request.resource.data.toCompanyId is string
-        && request.resource.data.vagaId is string
-        && request.resource.data.message is string
-        && request.resource.data.status in ["pending", "reviewed", "rejected", "hired"];
-      allow update: if request.auth != null
-        && resource.data.toCompanyId == request.auth.uid
+      allow read: if signedIn() && (resource.data.fromUserId == request.auth.uid || (resource.data.toCompanyId == request.auth.uid && verifiedCompany(request.auth.uid)));
+      allow create, delete: if false; // created by Functions; prevents forged applications/grants
+      allow update: if signedIn() && resource.data.toCompanyId == request.auth.uid
+        && verifiedCompany(request.auth.uid)
         && request.resource.data.fromUserId == resource.data.fromUserId
         && request.resource.data.toCompanyId == resource.data.toCompanyId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "read"]);
-      allow delete: if false;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "read"])
+        && request.resource.data.status in ["pending", "reviewed", "rejected", "hired"]
+        && request.resource.data.read is bool;
     }
-
-    // Proposals
     match /proposals/{proposalId} {
-      allow read: if request.auth != null && (resource.data.toUserId == request.auth.uid || resource.data.fromCompanyId == request.auth.uid);
-      allow create: if request.auth != null && request.resource.data.fromCompanyId == request.auth.uid && request.resource.data.fromCompanyName is string && request.resource.data.toUserId is string && request.resource.data.message is string;
-      allow update: if request.auth != null
-        && resource.data.toUserId == request.auth.uid
+      allow read: if signedIn() && (resource.data.toUserId == request.auth.uid || (resource.data.fromCompanyId == request.auth.uid && verifiedCompany(request.auth.uid)));
+      allow create, delete: if false; // created by Functions after company verification
+      allow update: if signedIn() && resource.data.toUserId == request.auth.uid
         && request.resource.data.toUserId == resource.data.toUserId
         && request.resource.data.fromCompanyId == resource.data.fromCompanyId
-        && request.resource.data.fromCompanyName == resource.data.fromCompanyName
-        && request.resource.data.message == resource.data.message
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "read"])
-        && (
-          request.resource.data.status == resource.data.status
-          || request.resource.data.status in ["accepted", "rejected"]
-        )
-        && request.resource.data.read == true;
-      allow delete: if false;
+        && request.resource.data.status in ["pending", "accepted", "rejected"]
+        && request.resource.data.read is bool;
     }
 
     match /desafios/{id} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.empresaId == request.auth.uid
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.tipoConta == "empresa"
-        && request.resource.data.empresaNome is string
-        && request.resource.data.titulo is string
-        && request.resource.data.descricao is string
-        && request.resource.data.area is string
-        && request.resource.data.nivel in ["iniciante", "intermediario", "avancado"]
-        && request.resource.data.notaMinima is number
-        && request.resource.data.perguntas is list
-        && request.resource.data.status == "aberto";
-      allow update, delete: if request.auth != null && resource.data.empresaId == request.auth.uid;
+      allow read: if signedIn(); // question docs must not contain answer keys
+      allow create, delete: if false; // created/deleted only by trusted Functions/admin workflows
+      allow update: if signedIn() && resource.data.empresaId == request.auth.uid
+        && verifiedCompany(request.auth.uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+        && request.resource.data.status in ["aberto", "fechado"];
     }
-
     match /conquistas/{id} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && request.resource.data.desafioId is string
-        && request.resource.data.desafioTitulo is string
-        && request.resource.data.empresaNome is string
-        && request.resource.data.nivel in ["iniciante", "intermediario", "avancado"]
-        && request.resource.data.nota is number;
-      allow update, delete: if false;
+      allow read: if signedIn();
+      allow create, update, delete: if false; // score and points are server-generated
     }
   }
 }

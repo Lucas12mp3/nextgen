@@ -5,9 +5,7 @@ import ProposalForm from "@/components/proposals/ProposalForm";
 type StudentCardProfile = {
   uid: string;
   nome?: string;
-  instituicao?: string;
-  resumeUrl?: string;
-};
+  instituicao?: string;};
 
 type Props = {
   student: StudentCardProfile;
@@ -49,9 +47,6 @@ export default function StudentCard({ student, canPropose = false, challengeCoun
             <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700">
               {totalPoints} pts
             </span>
-          )}
-          {student.resumeUrl && (
-            <a href={student.resumeUrl} target="_blank" rel="noreferrer" className="text-xs text-[#123a5a] underline">Ver currículo</a>
           )}
           {canPropose && (
             <div>

@@ -1,68 +1,26 @@
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { doc, setDoc } from "firebase/firestore";
-import { storage, db } from "@/firebase/config";
+import { ref, uploadBytesResumable } from "firebase/storage";
+import { httpsCallable } from "firebase/functions";
+import { auth, functions, storage } from "@/firebase/config";
 
-/**
- * Faz o upload do currículo em PDF para o Firebase Storage com acompanhamento de progresso.
- * @param uid ID do usuário autenticado
- * @param file Arquivo PDF selecionado
- * @param onProgress Callback opcional para atualizar a porcentagem do progresso (0-100)
- */
-export async function uploadResume(
-  uid: string,
-  file: File,
-  onProgress?: (progress: number) => void
-): Promise<string> {
-  if (!file) throw new Error("Nenhum arquivo enviado.");
-  if (file.type !== "application/pdf") {
-    throw new Error("Apenas arquivos no formato PDF são aceitos.");
-  }
-
-  // Gera um nome único mantendo a extensão
-  const fileName = `${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-  const storageRef = ref(storage, `curriculos/${uid}/${fileName}`);
-
-  const uploadTask = uploadBytesResumable(storageRef, file);
-
-  return new Promise((resolve, reject) => {
-    uploadTask.on(
-      "state_changed",
-      (snapshot) => {
-        const progress = Math.round(
-          (snapshot.bytesTransferred / snapshot.totalBytes) * 100
-        );
-        if (onProgress) onProgress(progress);
-      },
-      (error) => {
-        console.error("Erro no upload do Storage:", error);
-        reject(error);
-      },
-      async () => {
-        const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-        resolve(downloadUrl);
-      }
-    );
-  });
+export async function uploadResume(uid: string, file: File, onProgress?: (progress: number) => void): Promise<string> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) throw new Error("Sessão inválida.");
+  if (!file || file.type !== "application/pdf" || file.size >= 5 * 1024 * 1024) throw new Error("Envie um PDF com menos de 5 MB.");
+  const fileName = `${crypto.randomUUID()}.pdf`;
+  const path = `curriculos/${uid}/${fileName}`;
+  const task = uploadBytesResumable(ref(storage, path), file, { contentType: "application/pdf" });
+  await new Promise<void>((resolve, reject) => task.on("state_changed", (snapshot) => {
+    onProgress?.(Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100));
+  }, reject, resolve));
+  await httpsCallable(functions, "setResumeObjectPath")({ path });
+  return path;
 }
 
-/**
- * Atualiza os campos do perfil do estudante no Firestore.
- * @param uid ID do usuário autenticado
- * @param data Dados a serem atualizados ou inseridos
- */
-export async function updateProfileDoc(
-  uid: string,
-  data: Record<string, unknown>
-): Promise<void> {
-  const userDocRef = doc(db, "users", uid);
+export async function updateProfileDoc(uid: string, data: Record<string, unknown>): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) throw new Error("Sessão inválida.");
+  await httpsCallable(functions, "updatePublicProfile")(data);
+}
 
-  // Utiliza setDoc com merge para criar/mesclar o documento do usuário
-  await setDoc(
-    userDocRef,
-    {
-      ...data,
-      atualizadoEm: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+export async function getResumeUrl(studentUid: string): Promise<string> {
+  const result = await httpsCallable<{ studentUid: string }, { url: string }>(functions, "getResumeDownloadUrl")({ studentUid });
+  return result.data.url;
 }

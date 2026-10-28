@@ -7,6 +7,7 @@ import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { RequireProfileType } from "@/components/auth/RequireProfileType";
 import { calcularPontosDesafio, subscribeConquistas, subscribeRankingGeral, type Conquista, type RankingItem } from "@/services/desafios";
+import { getResumeUrl } from "@/services/perfil";
 
 type StudentProfile = {
   nome?: string;
@@ -17,13 +18,13 @@ type StudentProfile = {
   github?: string;
   linkedin?: string;
   portfolio?: string;
-  resumeUrl?: string;
   skills?: string[];
   tipoConta?: string;
 };
 
 type PrivateStudentProfile = {
   dataNascimento?: string | Date;
+  resumeObjectPath?: string;
 };
 
 export default function PerfilEstudantePage() {
@@ -31,6 +32,7 @@ export default function PerfilEstudantePage() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<StudentProfile | null>(null);
   const [privateProfile, setPrivateProfile] = useState<PrivateStudentProfile | null>(null);
+  const [resumeBusy, setResumeBusy] = useState(false);
   const [conquistas, setConquistas] = useState<Conquista[]>([]);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const router = useRouter();
@@ -141,7 +143,7 @@ export default function PerfilEstudantePage() {
                 {profile?.github && <a href={profile.github} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">GitHub</a>}
                 {profile?.linkedin && <a href={profile.linkedin} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">LinkedIn</a>}
                 {profile?.portfolio && <a href={profile.portfolio} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">Portfólio</a>}
-                {profile?.resumeUrl && <a href={profile.resumeUrl} target="_blank" rel="noreferrer" className="text-sm text-[#123a5a] underline">Currículo</a>}
+                {privateProfile?.resumeObjectPath && <button type="button" disabled={resumeBusy} onClick={async () => { setResumeBusy(true); try { const url = await getResumeUrl(user!.uid); window.open(url, "_blank", "noopener,noreferrer"); } catch { alert("Não foi possível abrir o currículo."); } finally { setResumeBusy(false); } }} className="text-sm text-[#123a5a] underline">{resumeBusy ? "Abrindo currículo..." : "Abrir meu currículo"}</button>}
               </div>
 
               <div className="mt-6 rounded-[18px] border border-[#dfeeff] bg-[#f9fcff] p-4">

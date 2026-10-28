@@ -1,69 +1,20 @@
-import {
-  addDoc,
-  collection,
-  doc,
-  getDocs,
-  onSnapshot,
-  query,
-  serverTimestamp,
-  updateDoc,
-  where,
-} from "firebase/firestore";
-import { auth, db } from "@/firebase/config";
+import { collection, doc, getDocs, onSnapshot, query, updateDoc, where } from "firebase/firestore";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "@/firebase/config";
 
-export type ApplicationData = {
-  fromUserId: string;
-  fromUserName?: string;
-  toCompanyId: string;
-  toCompanyName?: string;
-  vagaId?: string;
-  role?: string;
-  message?: string;
-  status?: "pending" | "reviewed" | "rejected" | "hired";
-  createdAt?: unknown;
-  read?: boolean;
-};
-
+export type ApplicationData = { fromUserId: string; fromUserName?: string; toCompanyId?: string; toCompanyName?: string; vagaId?: string; role?: string; message?: string; status?: "pending" | "reviewed" | "rejected" | "hired"; createdAt?: unknown; read?: boolean };
 export type ApplicationRecord = ApplicationData & { id: string };
-
 export async function sendApplication(payload: ApplicationData) {
-  const currentUser = auth.currentUser;
-
-  if (!currentUser) {
-    throw new Error("Você precisa estar autenticado para se candidatar.");
-  }
-
-  if (currentUser.uid !== payload.fromUserId) {
-    throw new Error("A candidatura deve ser enviada pela conta do usuário atual.");
-  }
-
-  const ref = await addDoc(collection(db, "applications"), {
-    ...payload,
-    fromUserName: payload.fromUserName ?? currentUser.displayName ?? currentUser.email ?? "Candidato",
-    status: payload.status ?? "pending",
-    createdAt: serverTimestamp(),
-    read: false,
-  });
-  return ref.id;
+  if (!auth.currentUser || auth.currentUser.uid !== payload.fromUserId) throw new Error("Faça login como estudante para se candidatar.");
+  const result = await httpsCallable(functions, "submitApplication")({ vagaId: payload.vagaId, message: payload.message });
+  return (result.data as { id: string }).id;
 }
-
 export function subscribeCompanyApplications(companyUid: string, onUpdate: (items: ApplicationRecord[]) => void) {
-  const q = query(collection(db, "applications"), where("toCompanyId", "==", companyUid));
-  return onSnapshot(q, (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as ApplicationRecord[]));
+  return onSnapshot(query(collection(db, "applications"), where("toCompanyId", "==", companyUid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ApplicationRecord[]));
 }
-
 export async function hasUserAppliedToVaga(userId: string, vagaId: string) {
-  const q = query(collection(db, "applications"), where("fromUserId", "==", userId), where("vagaId", "==", vagaId));
-  const snap = await getDocs(q);
+  const snap = await getDocs(query(collection(db, "applications"), where("fromUserId", "==", userId), where("vagaId", "==", vagaId)));
   return !snap.empty;
 }
-
-export async function markApplicationRead(applicationId: string) {
-  const ref = doc(db, "applications", applicationId);
-  await updateDoc(ref, { read: true });
-}
-
-export async function updateApplicationStatus(applicationId: string, status: ApplicationData["status"]) {
-  const ref = doc(db, "applications", applicationId);
-  await updateDoc(ref, { status, read: true });
-}
+export async function markApplicationRead(applicationId: string) { await updateDoc(doc(db, "applications", applicationId), { read: true }); }
+export async function updateApplicationStatus(applicationId: string, status: ApplicationData["status"]) { await updateDoc(doc(db, "applications", applicationId), { status, read: true }); }

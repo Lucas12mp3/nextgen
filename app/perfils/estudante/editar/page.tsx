@@ -17,7 +17,6 @@ export default function EditarPerfilEstudante() {
   const [linkedin, setLinkedin] = useState("");
   const [portfolio, setPortfolio] = useState("");
   const [skills, setSkills] = useState("");
-  const [resumeLink, setResumeLink] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [mensagem, setMensagem] = useState("");
@@ -42,7 +41,6 @@ export default function EditarPerfilEstudante() {
             setGithub(typeof p.github === "string" ? p.github : "");
             setLinkedin(typeof p.linkedin === "string" ? p.linkedin : "");
             setPortfolio(typeof p.portfolio === "string" ? p.portfolio : "");
-            setResumeLink(typeof p.resumeUrl === "string" ? p.resumeUrl : "");
             setSkills(Array.isArray(p.skills) ? (p.skills as string[]).join(", ") : "");
           }
         } catch (err) {
@@ -62,19 +60,8 @@ export default function EditarPerfilEstudante() {
     if (!user) return;
     setMensagem("");
 
-    const normalizedResumeLink = resumeLink.trim();
-    if (normalizedResumeLink && !/^https?:\/\//i.test(normalizedResumeLink)) {
-      setMensagem("Informe um link válido para o currículo, começando com http:// ou https://");
-      return;
-    }
-
     try {
-      let resumeUrl: string | null = normalizedResumeLink || null;
-
-      if (resumeFile) {
-        const url = await uploadResume(user.uid, resumeFile, (p) => setUploadProgress(p));
-        resumeUrl = url;
-      }
+      if (resumeFile) await uploadResume(user.uid, resumeFile, (p) => setUploadProgress(p));
 
       const data: Record<string, string | string[] | null> = {
         titulo,
@@ -91,8 +78,6 @@ export default function EditarPerfilEstudante() {
           .map((s) => s.trim())
           .filter(Boolean);
       }
-
-      if (resumeUrl) data.resumeUrl = resumeUrl;
 
       await updateProfileDoc(user.uid, data);
       setMensagem("Perfil atualizado com sucesso.");
@@ -152,17 +137,6 @@ export default function EditarPerfilEstudante() {
           <div>
             <label className="block text-sm font-semibold text-slate-700">Habilidades</label>
             <input value={skills} onChange={(e) => setSkills(e.target.value)} placeholder="TypeScript, Next.js, UI/UX" className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-700">Link do currículo (Drive, OneDrive, LinkedIn, etc.)</label>
-            <input
-              type="url"
-              value={resumeLink}
-              onChange={(e) => setResumeLink(e.target.value)}
-              placeholder="https://drive.google.com/..."
-              className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2"
-            />
           </div>
 
           <div>

@@ -7,8 +7,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import {
-  calcularNota,
-  concluirDesafio,
+  enviarTentativa,
   getDesafio,
   subscribeConquistas,
   type Conquista,
@@ -132,34 +131,11 @@ export default function DesafioDetalhePage() {
     setSubmitting(true);
     setError("");
 
-    const nota = calcularNota(
-      desafio.perguntas,
-      desafio.perguntas.map((_, index) => respostas[index])
-    );
-
-    const acertos = desafio.perguntas.reduce((count, pergunta, index) => {
-      return count + (respostas[index] === pergunta.correta ? 1 : 0);
-    }, 0);
-
-    const aprovado = nota >= desafio.notaMinima;
-
-    if (aprovado) {
-      const ok = await concluirDesafio(user.uid, desafio, nota);
-      if (ok) {
-        setConquista({
-          id: `${user.uid}_${desafio.id}`,
-          userId: user.uid,
-          desafioId: desafio.id,
-          desafioTitulo: desafio.titulo,
-          empresaNome: desafio.empresaNome,
-          nivel: desafio.nivel,
-          nota,
-          createdAt: new Date(),
-        });
-      }
-    }
-
-    setResultado({ nota, acertos, aprovado });
+    try {
+      const result = await enviarTentativa(desafio.id, desafio.perguntas.map((_, index) => respostas[index]));
+      setResultado({ nota: result.nota, acertos: result.acertos ?? 0, aprovado: result.aprovado });
+      if (result.aprovado) setConquista({ id: `${user.uid}_${desafio.id}`, userId: user.uid, desafioId: desafio.id, desafioTitulo: desafio.titulo, empresaNome: desafio.empresaNome, nivel: desafio.nivel, nota: result.nota, pontos: result.pontos, createdAt: new Date() });
+    } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível enviar as respostas."); }
     setSubmitting(false);
   }
 

@@ -16,9 +16,6 @@ export default function CadastroPage() {
   const [cnpj, setCnpj] = useState("");
   const [ramo, setRamo] = useState("");
   const [isMinor, setIsMinor] = useState(false);
-  const [respNome, setRespNome] = useState("");
-  const [respEmail, setRespEmail] = useState("");
-  const [respCpf, setRespCpf] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
   const router = useRouter();
@@ -51,24 +48,11 @@ export default function CadastroPage() {
         setCarregando(false);
         return;
       }
-      // valida idade (exige 16 anos ou mais para cadastro sem responsável)
-      const hoje = new Date();
-      const nasc = new Date(dataNascimento);
-      let idade = hoje.getFullYear() - nasc.getFullYear();
-      const m = hoje.getMonth() - nasc.getMonth();
-      if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
+      const idade = calcularIdade(dataNascimento);
       if (idade < 16) {
-        // exige dados do responsável
-        if (!respNome || !respEmail || !respCpf) {
-          setErro("Menores de 16 anos exigem dados do responsável (nome, e-mail e CPF).");
-          setCarregando(false);
-          return;
-        }
-        if (!validateCPF(respCpf)) {
-          setErro("CPF do responsável inválido.");
-          setCarregando(false);
-          return;
-        }
+        setErro("O cadastro de menores de 16 anos está temporariamente indisponível.");
+        setCarregando(false);
+        return;
       }
     }
     if (tipoConta === "empresa") {
@@ -94,10 +78,6 @@ export default function CadastroPage() {
         cnpj: tipoConta === "empresa" ? cnpj.replace(/\D/g, "") : undefined,
         dataNascimento: tipoConta === "estudante" ? dataNascimento : undefined,
         ramo: tipoConta === "empresa" ? ramo : undefined,
-        responsavel:
-          tipoConta === "estudante" && respNome
-            ? { nome: respNome, email: respEmail, cpf: respCpf.replace(/\D/g, "") }
-            : null,
       };
 
       await cadastrar(payload);
@@ -175,22 +155,18 @@ export default function CadastroPage() {
     setCnpj(formatted);
   }
 
-  function handleRespCpfChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    const formatted = formatCPF(val);
-    setRespCpf(formatted);
-  }
-
   function handleDataNascimentoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const val = e.target.value;
     setDataNascimento(val);
-    if (!val) return setIsMinor(false);
+    setIsMinor(Boolean(val) && calcularIdade(val) < 16);
+  }
+
+  function calcularIdade(value: string) {
+    const nascimento = new Date(`${value}T00:00:00`);
     const hoje = new Date();
-    const nasc = new Date(val);
-    let idade = hoje.getFullYear() - nasc.getFullYear();
-    const m = hoje.getMonth() - nasc.getMonth();
-    if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
-    setIsMinor(idade < 16);
+    let idade = hoje.getFullYear() - nascimento.getFullYear();
+    if (hoje.getMonth() < nascimento.getMonth() || (hoje.getMonth() === nascimento.getMonth() && hoje.getDate() < nascimento.getDate())) idade--;
+    return idade;
   }
 
   return (
@@ -302,46 +278,7 @@ export default function CadastroPage() {
                       className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
                     />
                   </div>
-                  {isMinor && (
-                    <div className="mt-4 rounded-2xl border border-[#cfe8ff] bg-[#fff] p-4">
-                      <h4 className="text-sm font-bold text-[#123a5a]">Dados do responsável</h4>
-                      <div className="mt-3 space-y-3">
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-slate-700">Nome do responsável</label>
-                          <input
-                            type="text"
-                            value={respNome}
-                            onChange={(e) => setRespNome(e.target.value)}
-                            required
-                            className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-slate-700">E-mail do responsável</label>
-                          <input
-                            type="email"
-                            value={respEmail}
-                            onChange={(e) => setRespEmail(e.target.value)}
-                            required
-                            className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-sm font-semibold text-slate-700">CPF do responsável</label>
-                          <input
-                            type="text"
-                            value={respCpf}
-                            onChange={handleRespCpfChange}
-                            placeholder="000.000.000-00"
-                            required
-                            className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {isMinor && <p className="mt-2 text-sm text-red-700">O cadastro de menores de 16 anos está temporariamente indisponível.</p>}
                 </>
               ) : (
                 <>
