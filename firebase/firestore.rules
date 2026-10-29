@@ -16,8 +16,17 @@ service cloud.firestore {
         allow read: if signedIn() && request.auth.uid == userId;
         allow write: if false; // trusted Functions only
       }
+      match /advertencias/{warningId} {
+        allow read: if signedIn() && request.auth.uid == userId;
+        allow create, delete: if false;
+        allow update: if signedIn() && request.auth.uid == userId
+          && resource.data.readAt == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readAt"])
+          && request.resource.data.readAt == request.time;
+      }
     }
     match /admins/{adminId} { allow read, write: if false; }
+    match /adminAudit/{eventId} { allow read, write: if false; }
     match /resumeAccess/{studentUid}/companies/{companyUid} { allow read, write: if false; }
     match /desafioSegredos/{challengeId} { allow read, write: if false; }
 

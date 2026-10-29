@@ -18,21 +18,17 @@ export default function RankingPage() {
   const [user, setUser] = useState<User | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    let stop: (() => void) | undefined;
     const unsubAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
+      stop?.(); setUser(u); setRanking([]); setError("");
+      if (!u) { setLoading(false); return; }
+      setLoading(true);
+      stop = subscribeRankingGeral(items => { setRanking(items); setLoading(false); }, () => { setError("Não foi possível carregar o ranking. Confira sua conexão e tente novamente."); setLoading(false); });
     });
-
-    const unsubRanking = subscribeRankingGeral((items) => {
-      setRanking(items);
-      setLoading(false);
-    });
-
-    return () => {
-      unsubAuth();
-      unsubRanking();
-    };
+    return () => { unsubAuth(); stop?.(); };
   }, []);
 
   const topThree = ranking.slice(0, 3);
@@ -85,7 +81,7 @@ export default function RankingPage() {
 
           {loading ? (
             <div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f9fcff] p-8 text-center text-sm text-slate-600">Carregando ranking...</div>
-          ) : ranking.length === 0 ? (
+          ) : !user ? <p className="rounded-2xl bg-[#f9fcff] p-8 text-center">Entre para acompanhar o ranking. <Link href="/login" className="font-semibold underline">Entrar</Link></p> : error ? <p role="alert" className="rounded-2xl bg-red-50 p-8 text-red-700">{error} <button type="button" onClick={() => window.location.reload()} className="underline">Tentar novamente</button></p> : ranking.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f9fcff] p-8 text-center text-sm text-slate-600">Ainda não há estudantes no ranking.</div>
           ) : (
             <div className="overflow-x-auto">

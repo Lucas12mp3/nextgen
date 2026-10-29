@@ -8,8 +8,8 @@ export async function sendProposal(payload: ProposalData) {
   const result = await httpsCallable(functions, "sendProposal")({ toUserId: payload.toUserId, role: payload.role, message: payload.message, requirements: payload.requirements });
   return (result.data as { id: string }).id;
 }
-export function subscribeUserProposals(uid: string, onUpdate: (items: ProposalRecord[]) => void) {
-  return onSnapshot(query(collection(db, "proposals"), where("toUserId", "==", uid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ProposalRecord[]));
+export function subscribeUserProposals(uid: string, onUpdate: (items: ProposalRecord[]) => void, onError?: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "proposals"), where("toUserId", "==", uid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ProposalRecord[]), onError);
 }
 export async function markProposalRead(proposalId: string) { await updateDoc(doc(db, "proposals", proposalId), { read: true }); }
 export async function respondProposal(proposalId: string, uid: string, accept: boolean) {

@@ -16,7 +16,7 @@ import {
 
 type Resultado = {
   nota: number;
-  acertos: number;
+  acertos: number | null;
   aprovado: boolean;
 };
 
@@ -34,6 +34,7 @@ export default function DesafioDetalhePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
@@ -60,13 +61,17 @@ export default function DesafioDetalhePage() {
   }, [router]);
 
   useEffect(() => {
-    if (!desafioId) {
+    if (!desafioId || !user?.uid) {
       return;
     }
 
     let active = true;
 
     async function carregarDesafio() {
+      setDataLoading(true);
+      setResultado(null);
+      setRespostas({});
+      try {
       const item = await getDesafio(desafioId);
 
       if (!active) return;
@@ -85,6 +90,9 @@ export default function DesafioDetalhePage() {
 
       setDesafio(item);
       setError("");
+      } catch {
+        if (active) { setDesafio(null); setError("Não foi possível carregar o desafio. Confira sua conexão e tente novamente."); }
+      } finally { if (active) setDataLoading(false); }
     }
 
     carregarDesafio();
@@ -92,7 +100,7 @@ export default function DesafioDetalhePage() {
     return () => {
       active = false;
     };
-  }, [desafioId]);
+  }, [desafioId, user?.uid]);
 
   useEffect(() => {
     if (!user?.uid || !desafioId) return;
@@ -118,6 +126,7 @@ export default function DesafioDetalhePage() {
   }
 
   async function enviarRespostas() {
+    if (submitting) return;
     if (!desafio || !user || tipoConta !== "estudante") {
       setError("Você precisa estar logado como estudante para responder ao desafio.");
       return;
@@ -133,13 +142,13 @@ export default function DesafioDetalhePage() {
 
     try {
       const result = await enviarTentativa(desafio.id, desafio.perguntas.map((_, index) => respostas[index]));
-      setResultado({ nota: result.nota, acertos: result.acertos ?? 0, aprovado: result.aprovado });
+      setResultado({ nota: result.nota, acertos: result.acertos, aprovado: result.aprovado });
       if (result.aprovado) setConquista({ id: `${user.uid}_${desafio.id}`, userId: user.uid, desafioId: desafio.id, desafioTitulo: desafio.titulo, empresaNome: desafio.empresaNome, nivel: desafio.nivel, nota: result.nota, pontos: result.pontos, createdAt: new Date() });
     } catch (err) { setError(err instanceof Error ? err.message : "Não foi possível enviar as respostas."); }
     setSubmitting(false);
   }
 
-  if (loading) {
+  if (loading || (desafioId && dataLoading)) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
         <p className="text-sm font-medium text-slate-600">Carregando desafio...</p>
@@ -299,7 +308,7 @@ export default function DesafioDetalhePage() {
               <>
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-700">Desafio concluído!</p>
                 <h2 className="mt-3 text-2xl font-black text-[#123a5a]">Nota: {resultado.nota}%</h2>
-                <p className="mt-2 text-sm text-slate-700">Você acertou {resultado.acertos} de {desafio.perguntas.length} perguntas.</p>
+                <p className="mt-2 text-sm text-slate-700">{resultado.acertos === null ? "Esta conquista já estava registrada." : <>Você acertou {resultado.acertos} de {desafio.perguntas.length} perguntas.</>}</p>
               </>
             ) : (
               <>

@@ -9,8 +9,8 @@ export async function sendApplication(payload: ApplicationData) {
   const result = await httpsCallable(functions, "submitApplication")({ vagaId: payload.vagaId, message: payload.message });
   return (result.data as { id: string }).id;
 }
-export function subscribeCompanyApplications(companyUid: string, onUpdate: (items: ApplicationRecord[]) => void) {
-  return onSnapshot(query(collection(db, "applications"), where("toCompanyId", "==", companyUid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ApplicationRecord[]));
+export function subscribeCompanyApplications(companyUid: string, onUpdate: (items: ApplicationRecord[]) => void, onError?: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "applications"), where("toCompanyId", "==", companyUid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ApplicationRecord[]), onError);
 }
 export async function hasUserAppliedToVaga(userId: string, vagaId: string) {
   const snap = await getDocs(query(collection(db, "applications"), where("fromUserId", "==", userId), where("vagaId", "==", vagaId)));

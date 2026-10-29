@@ -5,6 +5,7 @@ import { getStorage } from "firebase-admin/storage";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 initializeApp();
+export { getAdminSession, getAdminOverview, listAdminCompanies, setCompanyAuthorization, listAdminPosts, listAdminComments, deleteCommentAsAdmin, listAdminUsers, issueUserWarning, listAdminWarnings } from "./admin.js";
 const db = getFirestore();
 const bucket = getStorage().bucket();
 const REGION = "southamerica-east1";
@@ -134,10 +135,16 @@ export const getResumeDownloadUrl = onCall({ region: REGION }, async (request) =
 export const approveCompany = onCall({ region: REGION }, async (request) => {
   const adminUid = requireAuth(request.auth?.uid);
   const targetUid = text(object(request.data).companyUid, "companyUid", 128);
-  if (!(await db.doc(`admins/${adminUid}`).get()).exists) throw new HttpsError("permission-denied", "Somente administradores podem aprovar empresas.");
-  const target = await profileRef(targetUid).get();
-  if (!target.exists || target.get("tipoConta") !== "empresa") throw new HttpsError("not-found", "Empresa não encontrada.");
-  await profileRef(targetUid).update({ companyStatus: "verified", companyApprovedAt: FieldValue.serverTimestamp(), companyApprovedBy: adminUid });
+  const ref = profileRef(targetUid);
+  const audit = db.collection("adminAudit").doc();
+  await db.runTransaction(async tx => {
+    const [admin, target] = await Promise.all([tx.get(db.doc("admins/" + adminUid)), tx.get(ref)]);
+    if (!admin.exists) throw new HttpsError("permission-denied", "Somente administradores podem aprovar empresas.");
+    if (!target.exists || target.get("tipoConta") !== "empresa") throw new HttpsError("not-found", "Empresa não encontrada.");
+    if (target.get("companyStatus") === "verified") return;
+    tx.update(ref, { companyStatus: "verified", companyApprovedAt: FieldValue.serverTimestamp(), companyApprovedBy: adminUid });
+    tx.create(audit, { action: "companyAuthorization", targetId: targetUid, status: "verified", previousStatus: target.get("companyStatus") ?? "pending", reason: "Aprovação administrativa pelo fluxo existente.", adminUid, createdAt: FieldValue.serverTimestamp() });
+  });
   return { ok: true };
 });
 

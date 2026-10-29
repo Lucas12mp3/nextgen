@@ -8,10 +8,10 @@ export async function criarVaga(payload: Omit<Vaga, "id"> & { createdAt?: unknow
   const result = await httpsCallable(functions, "createVacancy")({ titulo: payload.titulo, descricao: payload.descricao, requisitos: payload.requisitos, modalidade: payload.modalidade, local: payload.local });
   return (result.data as { id: string }).id;
 }
-export function subscribeVagas(onUpdate: (items: Vaga[]) => void) {
-  return onSnapshot(query(collection(db, "vagas"), where("status", "==", "aberta"), orderBy("createdAt", "desc")), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Vaga[]));
+export function subscribeVagas(onUpdate: (items: Vaga[]) => void, onError?: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "vagas"), where("status", "==", "aberta"), orderBy("createdAt", "desc")), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Vaga[]), onError);
 }
-export function subscribeVagasEmpresa(empresaId: string, onUpdate: (items: Vaga[]) => void) {
-  return onSnapshot(query(collection(db, "vagas"), where("empresaId", "==", empresaId), orderBy("createdAt", "desc")), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Vaga[]));
+export function subscribeVagasEmpresa(empresaId: string, onUpdate: (items: Vaga[]) => void, onError?: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "vagas"), where("empresaId", "==", empresaId), orderBy("createdAt", "desc")), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Vaga[]), onError);
 }
 export async function fecharVaga(vagaId: string) { await updateDoc(doc(db, "vagas", vagaId), { status: "fechada" }); }

@@ -1,12 +1,13 @@
 "use client";
 import Link from "next/link";
+import AccountWarnings from "@/components/AccountWarnings";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { subscribeUserProposals, markProposalRead, respondProposal } from "@/services/proposals";
 import { subscribeCompanyApplications, markApplicationRead, updateApplicationStatus } from "@/services/applications";
-import { getResumeUrl } from "@/services/perfil";
+import { openResumeInNewTab } from "@/services/perfil";
 
 type ProfileData = Record<string, unknown> & { tipoConta?: "estudante" | "empresa" };
 type ProposalItem = Record<string, unknown> & { id: string; fromCompanyName?: string; role?: string; message?: string; read?: boolean; };
@@ -17,10 +18,13 @@ export default function NotificationsPage() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [proposals, setProposals] = useState<ProposalItem[]>([]);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
+  const [actionError, setActionError] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     let unsubProposals: (() => void) | undefined;
     let unsubApplications: (() => void) | undefined;
+    let active = true;
 
     const unsubAuth = onAuthStateChanged(auth, async (u) => {
       if (unsubProposals) unsubProposals();
@@ -35,7 +39,10 @@ export default function NotificationsPage() {
       }
 
       setUser(u);
+      setActionError("");
+      try {
       const snap = await getDoc(doc(db, "users", u.uid));
+      if (!active || auth.currentUser?.uid !== u.uid) return;
       const profileData = snap.exists() ? snap.data() : null;
       setProfile(profileData);
 
@@ -43,15 +50,21 @@ export default function NotificationsPage() {
         unsubProposals = subscribeUserProposals(u.uid, (list) => setProposals(list));
         setApplications([]);
       } else if (profileData?.tipoConta === "empresa") {
+        if (profileData.companyStatus !== "verified") {
+          setActionError("Sua empresa aguarda aprovação para receber candidaturas.");
+          setApplications([]); setProposals([]); return;
+        }
         unsubApplications = subscribeCompanyApplications(u.uid, (list) => setApplications(list));
         setProposals([]);
       } else {
         setProposals([]);
         setApplications([]);
       }
+      } catch { if (active) setActionError("Não foi possível carregar suas notificações. Confira sua conexão e tente novamente."); }
     });
 
     return () => {
+      active = false;
       unsubAuth();
       if (unsubProposals) unsubProposals();
       if (unsubApplications) unsubApplications();
@@ -59,7 +72,8 @@ export default function NotificationsPage() {
   }, []);
 
   async function handleMarkProposalRead(id: string) {
-    await markProposalRead(id);
+    try { setActionError(""); await markProposalRead(id); }
+    catch { setActionError("Não foi possível marcar a proposta como lida. Tente novamente."); }
   }
 
   async function handleRespond(id: string, accept: boolean) {
@@ -73,21 +87,26 @@ export default function NotificationsPage() {
   }
 
   async function handleMarkApplicationRead(id: string) {
-    await markApplicationRead(id);
+    try { setBusyId(id); setActionError(""); await markApplicationRead(id); }
+    catch { setActionError("Não foi possível marcar a candidatura como lida. Tente novamente."); }
+    finally { setBusyId(null); }
   }
 
   async function handleOpenResume(studentUid?: string) {
     if (!studentUid) return;
-    try { const url = await getResumeUrl(studentUid); window.open(url, "_blank", "noopener,noreferrer"); }
+    try { await openResumeInNewTab(studentUid); }
     catch (err) { alert(err instanceof Error ? err.message : "Não foi possível abrir o currículo."); }
   }
 
   async function handleApplicationStatus(id: string, status: string) {
     const normalizedStatus = status as "pending" | "reviewed" | "rejected" | "hired";
-    await updateApplicationStatus(id, normalizedStatus);
+    try { setBusyId(id); setActionError(""); await updateApplicationStatus(id, normalizedStatus); }
+    catch { setActionError("Não foi possível atualizar a candidatura. Tente novamente."); }
+    finally { setBusyId(null); }
   }
 
   const statusOptions = ["pending", "reviewed", "rejected", "hired"];
+  const statusLabels: Record<string, string> = { pending: "Pendente", reviewed: "Em análise", rejected: "Recusada", hired: "Contratado" };
 
   const backHref = profile?.tipoConta === "empresa" ? "/perfils/empresa" : profile?.tipoConta === "estudante" ? "/perfils/estudante" : "/feed";
 
@@ -104,6 +123,8 @@ export default function NotificationsPage() {
           </Link>
         </div>
 
+        <AccountWarnings />
+        {actionError && <p role="alert" className="mb-4 rounded-2xl bg-red-50 p-4 text-red-700">{actionError}</p>}
         <div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
           {profile?.tipoConta === "empresa" ? (
             <div>
@@ -120,7 +141,7 @@ export default function NotificationsPage() {
                         <div>
                           <strong className="text-[#123a5a]">{it.fromUserName || "Candidato"}</strong>
                           <div className="text-sm text-slate-600">Cargo: {it.role || "—"}</div>
-                          <div className="text-sm text-slate-600">Status: {it.status || "pending"}</div>
+                          <div className="text-sm text-slate-600">Status: {statusLabels[it.status || "pending"] || it.status}</div>
                           <p className="mt-2 text-sm text-slate-700">{it.message}</p>
                         </div>
                         <div className="flex min-w-[150px] flex-col gap-2">
@@ -128,11 +149,13 @@ export default function NotificationsPage() {
                           <button onClick={() => handleMarkApplicationRead(it.id)} className="rounded-full bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-700">Marcar lida</button>
                           <select
                             value={it.status || "pending"}
+                            disabled={busyId === it.id}
+                            aria-label={"Situação da candidatura de " + (it.fromUserName || "candidato")}
                             onChange={(e) => handleApplicationStatus(it.id, e.target.value)}
                             className="rounded-full border border-[#cfe8ff] bg-white px-2 py-1.5 text-sm text-slate-700"
                           >
                             {statusOptions.map((status) => (
-                              <option key={status} value={status}>{status}</option>
+                              <option key={status} value={status}>{statusLabels[status]}</option>
                             ))}
                           </select>
                         </div>

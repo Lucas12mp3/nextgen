@@ -18,6 +18,8 @@ export default function EditarPerfilEmpresa() {
   const [tagline, setTagline] = useState("");
   const [localizacao, setLocalizacao] = useState("");
   const [mensagem, setMensagem] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,6 +44,8 @@ export default function EditarPerfilEmpresa() {
           }
         } catch (err) {
           console.error("Erro ao carregar perfil:", err);
+          setLoadFailed(true);
+          setMensagem("Não foi possível carregar seu perfil. Atualize a página para tentar novamente.");
         } finally {
           setLoading(false);
         }
@@ -54,7 +58,8 @@ export default function EditarPerfilEmpresa() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!user) return;
+    if (!user || saving || loadFailed) return;
+    setSaving(true);
     setMensagem("");
     try {
 
@@ -64,8 +69,8 @@ export default function EditarPerfilEmpresa() {
       router.push("/perfils/empresa");
     } catch (err) {
       console.error(err);
-      setMensagem("Erro ao atualizar perfil.");
-    }
+      setMensagem("Não foi possível salvar o perfil. Confira sua conexão e tente novamente.");
+    } finally { setSaving(false); }
   }
 
   return (
@@ -111,20 +116,20 @@ export default function EditarPerfilEmpresa() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-700">Site</label>
-            <input value={site} onChange={(e) => setSite(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+            <input type="url" value={site} onChange={(e) => setSite(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-700">LinkedIn</label>
-            <input value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
+            <input type="url" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] px-4 py-2 mt-2" />
           </div>
 
           <div className="flex gap-3">
-            <button type="submit" className="rounded-2xl bg-[#123a5a] text-white px-4 py-2">Salvar</button>
+            <button type="submit" disabled={saving || loadFailed} className="rounded-2xl bg-[#123a5a] text-white px-4 py-2">{saving ? "Salvando..." : "Salvar"}</button>
             <button type="button" onClick={() => router.push("/perfils/empresa")} className="rounded-2xl border border-[#cfe8ff] px-4 py-2">Cancelar</button>
           </div>
 
-          {mensagem && <p className="text-sm text-slate-700 mt-2">{mensagem}</p>}
+          {mensagem && <p role="status" className="text-sm text-slate-700 mt-2">{mensagem}</p>}
         </form>
       </div>
     </main>

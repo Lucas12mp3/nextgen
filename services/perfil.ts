@@ -24,3 +24,14 @@ export async function getResumeUrl(studentUid: string): Promise<string> {
   const result = await httpsCallable<{ studentUid: string }, { url: string }>(functions, "getResumeDownloadUrl")({ studentUid });
   return result.data.url;
 }
+
+export async function openResumeInNewTab(studentUid: string): Promise<void> {
+  // Open during the click event so browsers do not block the authenticated download.
+  const popup = window.open("about:blank", "_blank");
+  if (!popup) throw new Error("Permita abrir uma nova aba para visualizar o currículo.");
+  popup.opener = null;
+  try {
+    const url = await getResumeUrl(studentUid);
+    popup.location.replace(url);
+  } catch (error) { popup.close(); throw error; }
+}

@@ -145,7 +145,7 @@ export default function PerfilEmpresaPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h3 className="text-sm font-bold text-[#123a5a]">Mural de vagas</h3>
               <Link href="/desafios" className="text-xs font-semibold text-[#123a5a] underline">Gerenciar desafios</Link>
-            </div>            {companyPending ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Sua empresa aguarda aprovação administrativa. A publicação de vagas, propostas e desafios fica bloqueada até a aprovação.</p> : <JobForm />}
+            </div>            {companyPending ? <p className="rounded-xl bg-amber-50 p-4 text-sm text-amber-800">{profile?.companyStatus === "rejected" ? "A autorização da empresa foi recusada. A publicação de vagas, propostas e desafios depende de nova revisão administrativa." : "Sua empresa aguarda aprovação administrativa. A publicação de vagas, propostas e desafios fica bloqueada até a aprovação."}</p> : <JobForm />}
           </section>
 
           <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
@@ -216,7 +216,7 @@ export default function PerfilEmpresaPage() {
         </div>
 
         {selectedJob && (
-          <JobModal
+          <JobModal key={selectedJob.id}
             vaga={selectedJob}
             currentUserId={user?.uid ?? null}
             isStudent={false}

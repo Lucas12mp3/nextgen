@@ -18,11 +18,17 @@ export default function FeedPage() {
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {
+		let stopVagas: (() => void) | undefined;
 		const unsubAuth = onAuthStateChanged(auth, async (u) => {
+			stopVagas?.();
+			setVagas([]);
+			if (u) stopVagas = subscribeVagas(items => setVagas(items), () => setVagas([]));
 			setUser(u);
 			if (u) {
+				try {
 				const snap = await getDoc(doc(db, "users", u.uid));
-				setProfile(snap.exists() ? snap.data() : null);
+				if (auth.currentUser?.uid === u.uid) setProfile(snap.exists() ? snap.data() : null);
+				} catch { setProfile(null); }
 			} else {
 				setProfile(null);
 			}
@@ -30,12 +36,11 @@ export default function FeedPage() {
 		});
 
 		const unsubPosts = subscribeToPosts((items) => setPosts(items));
-		const unsubVagas = subscribeVagas((items) => setVagas(items));
 
 		return () => {
 			unsubAuth();
 			unsubPosts();
-			unsubVagas();
+			stopVagas?.();
 		};
 	}, []);
 
