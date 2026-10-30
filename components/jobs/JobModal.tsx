@@ -95,11 +95,11 @@ export default function JobModal({ vaga, currentUserId, isStudent = false, onClo
       });
 
       setAlreadyApplied(true);
-      setMessage("Candidatura enviada com sucesso!");
+      setMessage("Candidatura enviada! Acompanhe o retorno da empresa em Minhas candidaturas.");
       onApplied?.();
     } catch (err) {
-      console.error(err);
-      setError("Não foi possível enviar sua candidatura. Tente novamente.");
+      const code = (err as { code?: string }).code;
+      setError(code === "permission-denied" ? "Não foi possível concluir a candidatura. Verifique se você já se candidatou e se a vaga continua disponível." : err instanceof Error ? err.message : "Não foi possível enviar sua candidatura. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -138,6 +138,7 @@ export default function JobModal({ vaga, currentUserId, isStudent = false, onClo
         {message && <p role="status" className="mt-4 text-sm text-emerald-600">{message}</p>}
 
         <div className="mt-6 flex justify-end gap-3">
+          {alreadyApplied && <Link href="/notifications" className="rounded-full border border-[#cfe8ff] px-5 py-2.5 text-sm font-semibold text-[#123a5a]">Minhas candidaturas</Link>}
           {isStudent && (
             <button
               type="button"

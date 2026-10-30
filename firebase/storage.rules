@@ -3,6 +3,10 @@ service firebase.storage {
   match /b/{bucket}/o {
     match /curriculos/{uid}/{arquivo} {
       allow read: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.tipoConta == "empresa"
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.companyStatus == "verified"
+        && firestore.exists(/databases/(default)/documents/resumeAccess/$(uid)/companies/$(request.auth.uid));
       allow create, update: if request.auth != null
         && request.auth.uid == uid
         && request.resource.size < 5 * 1024 * 1024

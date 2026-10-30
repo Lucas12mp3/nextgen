@@ -7,7 +7,6 @@ import { doc, getDoc } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import { auth, db } from "@/firebase/config";
 import { subscribeVagas, type Vaga } from "@/services/vagas";
-import BrandLogo from "@/components/BrandLogo";
 
 const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
@@ -72,9 +71,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!user) return;
     const unsub = subscribeVagas((items) => setVagas(items.slice(0, 4)));
     return () => unsub();
-  }, []);
+  }, [user]);
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
@@ -82,12 +82,8 @@ export default function Home() {
       <section id="sobre" className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
         <div>
           <div className="inline-flex items-center rounded-full border border-[#b9dcff] bg-white/80 px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-[#123a5a] shadow-sm backdrop-blur-sm">
-            <BrandLogo compact showWordmark={false} className="mr-2" />
+            <span aria-hidden="true" className="mr-2 h-2 w-2 rounded-full bg-sky-500" />
             Conectando jovens ao futuro
-          </div>
-
-          <div className="mt-6 animate-[heroBrandFloat_5s_ease-in-out_infinite]">
-            <BrandLogo className="justify-center md:justify-start" textClassName="!text-[3.2rem] md:!text-[5.5rem] lg:!text-[7rem]" />
           </div>
 
           <h1 className="mt-6 max-w-xl text-4xl font-black leading-tight tracking-tight text-[#123a5a] md:text-5xl lg:text-6xl">
@@ -296,7 +292,7 @@ export default function Home() {
 
       <footer className="border-t border-[#dfeeff] bg-white/80">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8 text-sm text-slate-600 md:flex-row md:items-center md:justify-between lg:px-10">
-          <BrandLogo compact className="items-center" />
+          <p className="text-xs text-slate-500">Conectando educação, talentos e oportunidades.</p>
 
           <div className="flex flex-wrap gap-5">
             <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>
@@ -313,7 +309,6 @@ export default function Home() {
           currentUserId={user?.uid ?? null}
           isStudent={profileType === "estudante"}
           onClose={() => setSelectedVaga(null)}
-          onApplied={() => setSelectedVaga(null)}
         />
       )}
     </main>

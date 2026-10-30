@@ -1,12 +1,14 @@
-import { collection, query, where, onSnapshot, doc, getDoc, updateDoc } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { auth, db, functions } from "@/firebase/config";
+import { collection, query, where, onSnapshot, doc, getDoc, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "@/firebase/config";
 export type ProposalData = { fromCompanyId: string; fromCompanyName: string; toUserId: string; role: string; message: string; requirements?: string; status?: "pending" | "accepted" | "rejected"; createdAt?: unknown };
 export type ProposalRecord = ProposalData & { id: string; read?: boolean };
 export async function sendProposal(payload: ProposalData) {
   if (!auth.currentUser || auth.currentUser.uid !== payload.fromCompanyId) throw new Error("Sessão inválida.");
-  const result = await httpsCallable(functions, "sendProposal")({ toUserId: payload.toUserId, role: payload.role, message: payload.message, requirements: payload.requirements });
-  return (result.data as { id: string }).id;
+  const company = await getDoc(doc(db, "users", auth.currentUser.uid));
+  const result = await addDoc(collection(db, "proposals"), { fromCompanyId: auth.currentUser.uid,
+    fromCompanyName: company.get("nome"), toUserId: payload.toUserId, role: payload.role.trim(),
+    message: payload.message.trim(), requirements: payload.requirements?.trim() || "", status: "pending", read: false, createdAt: serverTimestamp() });
+  return result.id;
 }
 export function subscribeUserProposals(uid: string, onUpdate: (items: ProposalRecord[]) => void, onError?: (error: Error) => void) {
   return onSnapshot(query(collection(db, "proposals"), where("toUserId", "==", uid)), (snap) => onUpdate(snap.docs.map((d) => ({ id: d.id, ...d.data() })) as ProposalRecord[]), onError);

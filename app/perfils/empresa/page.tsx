@@ -49,6 +49,7 @@ export default function PerfilEmpresaPage() {
   const [error, setError] = useState("");
   const [closingJob, setClosingJob] = useState<string | null>(null);
   const [jobFilter, setJobFilter] = useState<"all" | "aberta" | "fechada">("all");
+  const [studentSearch, setStudentSearch] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -105,6 +106,8 @@ export default function PerfilEmpresaPage() {
   }
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Carregando...</div>;
+  const featuredStudents = students.filter(student => `${student.nome || ""} ${student.instituicao || ""}`.toLocaleLowerCase("pt-BR").includes(studentSearch.toLocaleLowerCase("pt-BR")))
+    .sort((a, b) => (ranking.find(item => item.userId === b.uid)?.totalPontos ?? 0) - (ranking.find(item => item.userId === a.uid)?.totalPontos ?? 0) || (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
 
   return (
     <RequireProfileType allowed="empresa">
@@ -209,9 +212,11 @@ export default function PerfilEmpresaPage() {
 
           <section className="mt-6 rounded-[18px] border border-[#dfeeff] bg-white p-5 shadow-sm">
             <h3 className="text-sm font-bold text-[#123a5a]">Estudantes em destaque</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-500">Conheça os talentos da comunidade e envie uma oportunidade diretamente a quem combina com sua empresa.</p>
+            <label className="mt-4 block text-xs font-semibold text-[#123a5a]">Buscar por nome ou instituição<input type="search" value={studentSearch} onChange={event => setStudentSearch(event.target.value)} placeholder="Encontre um estudante" className="mt-2 w-full rounded-xl border border-[#cfe8ff] bg-[#f9fcff] px-4 py-3 text-sm font-normal" /></label>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {students.length === 0 && <p className="text-sm text-slate-500">Nenhum estudante disponível no momento.</p>}
-              {students.slice(0, 6).map((s) => {
+              {featuredStudents.length === 0 && <p className="text-sm text-slate-500">Nenhum estudante encontrado.</p>}
+              {featuredStudents.slice(0, 6).map((s) => {
                 const rankingData = ranking.find((item) => item.userId === s.uid);
                 const position = ranking.findIndex((item) => item.userId === s.uid) + 1;
                 return (

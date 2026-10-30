@@ -17,6 +17,7 @@ export default function ProposalForm({ toUserId, onSent }: Props) {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   async function handleSend() {
+    if (loading) return;
     if (!auth.currentUser) {
       setFeedback({ type: "error", message: "Faça login como empresa para enviar propostas." });
       return;
@@ -50,18 +51,18 @@ export default function ProposalForm({ toUserId, onSent }: Props) {
   }
 
   return (
-    <div className="rounded-md border p-3 bg-white">
-      <input value={role} onChange={(e) => setRole(e.target.value)} placeholder="Cargo / Função" className="w-full rounded border px-2 py-1 mb-2" />
-      <textarea value={message} onChange={(e) => setMessage(e.target.value)} placeholder="Mensagem para o candidato" className="w-full rounded border px-2 py-1 mb-2" />
-        <textarea value={requirements} onChange={(e) => setRequirements(e.target.value)} placeholder="Requisitos da vaga (ex.: habilidades, localização, carga horária)" className="w-full rounded border px-2 py-1 mb-2" />
+    <div className="space-y-3 rounded-2xl bg-[#f6fbff] p-4">
+      <label className="block text-xs font-semibold text-[#123a5a]">Cargo ou função<input maxLength={160} value={role} onChange={(e) => setRole(e.target.value)} placeholder="Ex.: Aprendiz em tecnologia" className="mt-2 w-full rounded-xl border border-[#cfe8ff] bg-white px-3 py-2.5 text-sm font-normal" /></label>
+      <label className="block text-xs font-semibold text-[#123a5a]">Mensagem para o estudante<textarea maxLength={2000} value={message} onChange={(e) => setMessage(e.target.value)} rows={3} placeholder="Apresente a oportunidade e os próximos passos." className="mt-2 w-full rounded-xl border border-[#cfe8ff] bg-white px-3 py-2.5 text-sm font-normal" /></label>
+      <label className="block text-xs font-semibold text-[#123a5a]">Requisitos (opcional)<textarea maxLength={2000} value={requirements} onChange={(e) => setRequirements(e.target.value)} rows={2} placeholder="Habilidades, localização ou carga horária" className="mt-2 w-full rounded-xl border border-[#cfe8ff] bg-white px-3 py-2.5 text-sm font-normal" /></label>
       {feedback && (
-        <p className={`mt-3 text-sm ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
+        <p role={feedback.type === "error" ? "alert" : "status"} className={`mt-3 text-sm ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
           {feedback.message}
         </p>
       )}
 
       <div className="flex justify-end">
-        <button onClick={handleSend} disabled={loading} className="rounded bg-[#123a5a] text-white px-3 py-1">{loading ? "Enviando..." : "Enviar proposta"}</button>
+        <button type="button" onClick={handleSend} disabled={loading || !role.trim() || !message.trim()} className="rounded-full bg-[#123a5a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{loading ? "Enviando..." : "Enviar proposta"}</button>
       </div>
     </div>
   );

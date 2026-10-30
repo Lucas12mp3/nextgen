@@ -2,6 +2,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
+    function profileText(data, key, maxSize) {
+      return data.get(key, "") is string && data.get(key, "").size() <= maxSize;
+    }
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -17,6 +20,20 @@ service cloud.firestore {
 
     // These documents are directory-safe only after the one-time migration removes email/resumeUrl.
     match /users/{userId} {
+      function validProfileEdit() {
+        let data = request.resource.data;
+        let changed = data.diff(resource.data).affectedKeys();
+        return data.atualizadoEm == request.time
+          && ((resource.data.tipoConta == "estudante" && changed.hasOnly(["titulo", "instituicao", "descricao", "github", "linkedin", "portfolio", "skills", "atualizadoEm"])
+            && profileText(data, "titulo", 500) && profileText(data, "instituicao", 500)
+            && profileText(data, "github", 500) && profileText(data, "portfolio", 500)
+            && data.get("skills", []) is list && data.get("skills", []).size() <= 40)
+          || (resource.data.tipoConta == "empresa" && changed.hasOnly(["nome", "ramo", "descricao", "site", "linkedin", "tagline", "localizacao", "atualizadoEm"])
+            && profileText(data, "nome", 500) && data.nome.size() > 0 && profileText(data, "ramo", 500)
+            && profileText(data, "site", 500) && profileText(data, "tagline", 500) && profileText(data, "localizacao", 500)))
+          && profileText(data, "descricao", 3000) && profileText(data, "linkedin", 500);
+      }
+      allow update: if signedIn() && request.auth.uid == userId && validProfileEdit();
       allow read: if signedIn();
       allow create, update, delete: if false; // trusted Functions only
       allow update: if isAdmin() && resource.data.tipoConta == "empresa"
@@ -63,8 +80,27 @@ service cloud.firestore {
         && request.resource.data.targetId is string;
       allow update, delete: if false;
     }
-    match /resumeAccess/{studentUid}/companies/{companyUid} { allow read, write: if false; }
+    match /resumeAccess/{studentUid}/companies/{companyUid} {
+      allow read: if signedIn() && (request.auth.uid == studentUid || request.auth.uid == companyUid);
+      allow create, update: if signedIn() && request.auth.uid in [studentUid, companyUid]
+        && verifiedCompany(companyUid)
+        && request.resource.data.keys().hasOnly(["applicationId", "grantedAt"])
+        && request.resource.data.grantedAt == request.time
+        && getAfter(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.fromUserId == studentUid
+        && getAfter(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.toCompanyId == companyUid;
+      allow delete: if false;
+    }
     match /desafioSegredos/{challengeId} { allow read, write: if false; }
+    match /resumes/{studentUid} {
+      allow get: if signedIn() && (request.auth.uid == studentUid || (verifiedCompany(request.auth.uid)
+        && exists(/databases/$(database)/documents/resumeAccess/$(studentUid)/companies/$(request.auth.uid))));
+      allow create, update: if signedIn() && request.auth.uid == studentUid
+        && request.resource.data.keys().hasOnly(["path", "updatedAt"])
+        && request.resource.data.path is string
+        && request.resource.data.path.matches("curriculos/" + studentUid + "/[^/]+[.]pdf")
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && request.auth.uid == studentUid;
+    }
 
     match /vagas/{vagaId} {
       allow read: if signedIn();
@@ -113,6 +149,21 @@ service cloud.firestore {
     }
 
     match /applications/{applicationId} {
+      function validApplication() {
+        let data = request.resource.data;
+        let vacancy = get(/databases/$(database)/documents/vagas/$(data.vagaId)).data;
+        let student = get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+        return data.keys().hasOnly(["fromUserId", "fromUserName", "toCompanyId", "toCompanyName", "vagaId", "role", "message", "status", "read", "createdAt"])
+          && student.tipoConta == "estudante" && data.fromUserId == request.auth.uid
+          && data.fromUserName == student.nome
+          && applicationId == request.auth.uid + "_" + data.vagaId
+          && vacancy.status == "aberta" && data.toCompanyId == vacancy.empresaId
+          && verifiedCompany(data.toCompanyId) && data.role == vacancy.titulo
+          && data.toCompanyName == vacancy.empresaNome
+          && data.message is string && data.message.size() > 0 && data.message.size() <= 2000
+          && data.status == "pending" && data.read == false && data.createdAt == request.time;
+      }
+      allow create: if signedIn() && validApplication();
       allow read: if isAdmin();
       allow read: if signedIn() && (resource.data.fromUserId == request.auth.uid || (resource.data.toCompanyId == request.auth.uid && verifiedCompany(request.auth.uid)));
       allow create, delete: if false; // created by Functions; prevents forged applications/grants
@@ -125,6 +176,16 @@ service cloud.firestore {
         && request.resource.data.read is bool;
     }
     match /proposals/{proposalId} {
+      allow create: if signedIn() && verifiedCompany(request.auth.uid)
+        && request.resource.data.keys().hasOnly(["fromCompanyId", "fromCompanyName", "toUserId", "role", "message", "requirements", "status", "read", "createdAt"])
+        && request.resource.data.fromCompanyId == request.auth.uid
+        && request.resource.data.fromCompanyName == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nome
+        && get(/databases/$(database)/documents/users/$(request.resource.data.toUserId)).data.tipoConta == "estudante"
+        && request.resource.data.role is string && request.resource.data.role.size() > 0 && request.resource.data.role.size() <= 160
+        && request.resource.data.message is string && request.resource.data.message.size() > 0 && request.resource.data.message.size() <= 2000
+        && request.resource.data.requirements is string && request.resource.data.requirements.size() <= 2000
+        && request.resource.data.status == "pending" && request.resource.data.read == false
+        && request.resource.data.createdAt == request.time;
       allow read: if signedIn() && (resource.data.toUserId == request.auth.uid || (resource.data.fromCompanyId == request.auth.uid && verifiedCompany(request.auth.uid)));
       allow create, delete: if false; // created by Functions after company verification
       allow update: if signedIn() && resource.data.toUserId == request.auth.uid

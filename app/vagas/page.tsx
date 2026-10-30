@@ -152,7 +152,6 @@ export default function VagasPage() {
           currentUserId={user?.uid ?? null}
           isStudent={profileType === "estudante"}
           onClose={() => setSelectedVaga(null)}
-          onApplied={() => setSelectedVaga(null)}
         />
       )}
     </main>
