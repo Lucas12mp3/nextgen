@@ -52,7 +52,7 @@ export default function AdminPage() {
         const [summary, companyPage, postPage, userPage] = await Promise.all([getAdminOverview(), listCompanies(), listPosts(), listUsers()]);
         if (!active || auth.currentUser?.uid !== user.uid) return;
         setOverview(summary); setCompanies(companyPage); setPosts(postPage); setUsers(userPage); setAccess("admin");
-      } catch { if (active && auth.currentUser?.uid === user.uid) { setError("Não foi possível abrir o painel. Confira sua conexão e se as funções administrativas já foram publicadas."); setAccess("error"); } }
+      } catch { if (active && auth.currentUser?.uid === user.uid) { setError("Não foi possível abrir o painel. Confira sua conexão e se as regras de acesso do Firestore foram publicadas."); setAccess("error"); } }
     });
     return () => { active = false; stop(); };
   }, []);

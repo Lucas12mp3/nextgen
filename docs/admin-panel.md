@@ -1,27 +1,27 @@
-# Painel administrativo
+﻿# Painel administrativo sem Cloud Functions
 
-O painel fica em `/admin`. Use uma conta existente em Authentication e crie, pelo Console Firebase, o documento `admins/{UID}` com exatamente o UID dessa conta. Um campo como `nome: "Administrador"` é suficiente. A permissão depende da existência do documento; para revogar o acesso administrativo, exclua-o. O campo `tipoConta` continua sendo estudante ou empresa.
+O painel `/admin` usa diretamente o SDK do Firestore e funciona no plano Spark, dentro das cotas do Firebase. Não é necessário publicar Cloud Functions para o painel.
 
-## Funcionalidades
+Crie pelo Console Firebase o documento `admins/{UID}`, usando exatamente o UID da conta em Authentication. Um campo `nome: "Administrador"` é suficiente. Remova o documento para revogar o acesso. Clientes não podem criar administradores nem listar a coleção; cada conta pode consultar somente seu próprio registro.
 
-- Visão geral com contagens reais de contas, estudantes, empresas, empresas pendentes, vagas abertas, publicações, candidaturas e desafios abertos.
-- Aprovação, recusa e retirada de autorização de empresas, com motivo obrigatório e histórico. CNPJ é consultado pelo servidor e exibido somente no painel autorizado.
-- Moderação dos comentários por publicação, com confirmação, motivo obrigatório e atualização do contador da publicação na mesma transação.
-- Advertências privadas, sem bloqueio ou suspensão automática. O destinatário pode lê-las e confirmar leitura em `/notifications`.
-- Histórico administrativo com responsável, destino, motivo e data. O cliente não pode alterar esse histórico.
+## Publicação
 
-As listas carregam 25 registros por página; os filtros locais procuram nos registros já carregados. O histórico individual exibe até 25 advertências recentes e a visão geral mostra as últimas 15 ações administrativas. Os indicadores são atualizados ao abrir o painel, após ações de moderação e pelo botão Atualizar painel.
+Na pasta do projeto execute:
 
-## Configuração e publicação
+```powershell
+npx.cmd --yes firebase-tools deploy --only firestore:rules --project nextgen-2d9df
+```
 
-As funções administrativas e as regras precisam ser publicadas no mesmo projeto Firebase usado pelo site. As mudanças locais não publicam nada automaticamente. Instale as dependências de `functions`, execute `npm run test:admin` e siga a migração de segurança documentada em `security-migration.md` antes de publicar o conjunto de regras.
+Publique também a versão atualizada do site na Vercel. A mudança local não atualiza o site automaticamente. Não publique as funções para usar o painel.
 
-O menu da conta mostra Administração quando `getAdminSession` confirma a permissão. Também é possível acessar `/admin` diretamente. Cada ação confere a autorização no servidor; as transações de alteração verificam novamente o documento administrativo antes de gravar. Não é necessário permitir leitura pública da coleção `admins`.
+## Recursos e segurança
 
-As advertências ficam em `users/{UID}/advertencias/{id}`. As regras permitem que o destinatário leia e altere somente a confirmação de leitura. Criação, exclusão e edição da mensagem são exclusivas do servidor. O histórico administrativo fica em `adminAudit`, sem leitura nem escrita direta pelos clientes.
+O painel mostra indicadores, empresas, publicações e usuários, permite aprovar ou recusar empresas, excluir comentários e enviar advertências. As listas têm 25 itens por página; o histórico mostra as últimas 15 ações e até 25 advertências por usuário.
+
+As regras verificam a existência de `admins/{UID}` em cada operação administrativa. Aprovações alteram somente os campos de revisão. Alterações administrativas usam transações para gravar a ação e o histórico juntos. O histórico não pode ser editado nem excluído pelos clientes. Advertências são privadas e o destinatário pode somente confirmar a leitura. Administradores podem ler os dados privados das empresas para conferir o CNPJ; há compatibilidade com o campo CNPJ antigo no documento da empresa.
+
+Outras funcionalidades do site (cadastro, currículos, vagas, candidaturas, propostas e correção de desafios) ainda usam Functions. Esta adaptação remove a dependência do painel administrativo, não de todo o site. As orientações de migração de dados privados em `security-migration.md` continuam relevantes.
 
 ## Validação
 
-`npm run test:admin` em `functions` compila o backend e testa os limites de autorização, validação de estados, identificadores e motivos. Esses testes não substituem os testes de integração das regras no Emulator. Antes de usar em produção, confira com contas de administrador, empresa pendente, empresa aprovada e estudante que apenas as ações correspondentes são aceitas.
-
-Não há um fluxo de criação de novos administradores pelo painel. A concessão inicial permanece sob controle de quem tem acesso administrativo ao projeto Firebase.
+Execute `npx.cmd tsc --noEmit` e `npm run build`. Antes de publicar, valide as regras no Emulator com Java instalado: conta sem login e conta comum não podem executar ações administrativas; somente o administrador deve poder aprovar empresas, excluir comentários e criar advertências; ninguém pode criar seu próprio registro em admins. Os testes antigos de `functions/tests` validam o backend opcional, não este acesso direto.
