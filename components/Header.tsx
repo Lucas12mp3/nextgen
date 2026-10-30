@@ -24,9 +24,11 @@ export default function Header() {
       setIsAdmin(false);
       if (u) void getAdminSession().then(session => { if (active && auth.currentUser?.uid === u.uid) setIsAdmin(session.isAdmin); }).catch(() => undefined);
       setUser(u);
+      setProfileType(null);
       if (u) {
         try {
           const snap = await getDoc(doc(db, "users", u.uid));
+          if (!active || auth.currentUser?.uid !== u.uid) return;
           const profile = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
           setProfileType(typeof profile?.tipoConta === "string" ? profile.tipoConta : null);
         } catch {
@@ -58,6 +60,7 @@ export default function Header() {
     try {
       await firebaseSignOut(auth);
       setMenuOpen(false);
+      setMobileOpen(false);
     } catch (err) {
       console.error(err);
     }
@@ -66,17 +69,13 @@ export default function Header() {
   const firstLetter = user?.displayName?.trim()?.[0] ?? user?.email?.trim()?.[0] ?? "N";
 
   return (
-    <header className="relative mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-y-3 px-4 py-4 sm:px-6 lg:px-10">
-      <Link href="/" className="group flex items-center transition-transform duration-300 hover:scale-[1.02]">
+    <header className="relative z-40 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-y-3 border-b border-[#dfeeff] bg-[#f6fbff] px-4 py-4 sm:px-6 lg:px-10">
+      <Link href="/" aria-label="NextGen — página inicial" onClick={() => { setMenuOpen(false); setMobileOpen(false); }} className="group flex items-center transition-transform duration-300 hover:scale-[1.02]">
         <BrandLogo compact showWordmark className="group-hover:drop-shadow-[0_8px_24px_rgba(36,113,190,0.18)]" />
       </Link>
 
-      <nav className="hidden items-center gap-5 text-sm font-medium text-slate-700 md:flex">
-        <Link href="/" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Início</Link>
-        <Link href="/vagas" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Vagas</Link>
-        <Link href="/desafios" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Desafios</Link>
-        <Link href="/ranking" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Ranking</Link>
-        <Link href="/feed" className="rounded-full px-3 py-2 transition hover:bg-white/60 hover:text-[#123a5a]">Feed</Link>
+      <nav aria-label="Navegação principal" className="hidden items-center gap-1 text-sm font-medium text-slate-700 md:flex">
+        {[["/", "Início"], ["/feed", "Feed"], ["/vagas", "Vagas"], ["/desafios", "Desafios"], ["/ranking", "Ranking"]].map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} className={`rounded-full px-3 py-2 transition ${pathname === href ? "bg-[#123a5a] text-white" : "hover:bg-white hover:text-[#123a5a]"}`}>{label}</Link>)}
       </nav>
 
       <div className="flex items-center justify-end gap-3">
@@ -87,7 +86,7 @@ export default function Header() {
           <div ref={menuRef} className="relative">
             <button
               type="button"
-              onClick={() => setMenuOpen((prev) => !prev)}
+              onClick={() => { setMenuOpen((prev) => !prev); setMobileOpen(false); }}
               aria-label="Menu da conta"
               aria-expanded={menuOpen}
               className="flex items-center gap-3 rounded-full border border-[#cfe8ff] bg-white px-2 py-1.5 shadow-sm transition hover:border-[#9ad4ff]"
@@ -114,7 +113,7 @@ export default function Header() {
                 <div className="space-y-1 p-2">
                   {isAdmin && <Link href="/admin" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-semibold text-sky-200 hover:bg-[#1d2733]">Administração</Link>}
                   <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
-                    <span>Meu perfil</span>
+                    <span>{profileType === "empresa" ? "Painel da empresa" : "Meu perfil"}</span>
                     <span>→</span>
                   </Link>
                   <Link href="/feed" onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
@@ -160,7 +159,7 @@ export default function Header() {
       </div>
       {mobileOpen && <nav id="mobile-navigation" aria-label="Navegação principal" className="order-last grid w-full grid-cols-3 gap-2 rounded-2xl border border-[#cfe8ff] bg-white p-3 shadow-sm md:hidden">
         {isAdmin && <Link href="/admin" onClick={() => setMobileOpen(false)} className="rounded-xl bg-sky-100 px-3 py-2 text-center text-sm font-semibold text-[#123a5a]">Administração</Link>}
-        {[["/", "Início"], ["/cadastro", "Cadastrar"], ["/vagas", "Vagas"], ["/desafios", "Desafios"], ["/ranking", "Ranking"], ["/feed", "Feed"]].map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => setMobileOpen(false)} className={`rounded-xl px-3 py-2 text-center text-sm font-semibold ${pathname === href ? "bg-[#123a5a] text-white" : "text-[#123a5a] hover:bg-[#edf6ff]"}`}>{label}</Link>)}
+        {[["/", "Início"], ["/feed", "Feed"], ["/vagas", "Vagas"], ["/desafios", "Desafios"], ["/ranking", "Ranking"], ...(user ? [[profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante", "Meu perfil"]] : [["/cadastro", "Cadastrar"]])].map(([href, label]) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} onClick={() => setMobileOpen(false)} className={`rounded-xl px-3 py-2 text-center text-sm font-semibold ${pathname === href ? "bg-[#123a5a] text-white" : "text-[#123a5a] hover:bg-[#edf6ff]"}`}>{label}</Link>)}
       </nav>}
     </header>
   );

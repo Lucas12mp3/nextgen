@@ -36,12 +36,12 @@ export type PostRecord = PostData & {
   likes?: string[];
 };
 
-export function subscribeToPosts(onUpdate: (items: PostRecord[]) => void) {
+export function subscribeToPosts(onUpdate: (items: PostRecord[]) => void, onError?: (error: Error) => void) {
   const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
   const unsub = onSnapshot(q, (snap) => {
     const items = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as PostRecord[];
     onUpdate(items);
-  });
+  }, onError);
   return unsub;
 }
 

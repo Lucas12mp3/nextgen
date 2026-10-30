@@ -7,6 +7,7 @@ type ProfileInfo = {
   nome?: string;
   tipoConta?: string | null;
   photoURL?: string | null;
+  companyStatus?: string;
 };
 
 type Props = {
@@ -20,14 +21,20 @@ export default function PostForm({ onPublished, profile }: Props) {
   const [kind, setKind] = useState<"post" | "vaga" | "evento">("post");
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const canPublishJob = profile?.tipoConta === "empresa" && profile.companyStatus === "verified";
 
   async function publish() {
+    if (loading) return;
     if (!auth.currentUser) {
       setFeedback({ type: "error", message: "Faça login para publicar." });
       return;
     }
     if (!text.trim()) {
       setFeedback({ type: "error", message: "Escreva uma mensagem antes de publicar." });
+      return;
+    }
+    if (kind === "vaga" && !canPublishJob) {
+      setFeedback({ type: "error", message: "A publicação de vagas é exclusiva de empresas aprovadas." });
       return;
     }
     setLoading(true);
@@ -57,10 +64,11 @@ export default function PostForm({ onPublished, profile }: Props) {
   return (
     <div className="rounded-[20px] border border-[#dfeeff] bg-white p-4 shadow-sm">
       <div className="mb-3 flex gap-2">
-        {(["post", "vaga", "evento"] as const).map((option) => (
+        {(["post", "vaga", "evento"] as const).filter(option => option !== "vaga" || canPublishJob).map((option) => (
           <button
             key={option}
             type="button"
+            aria-pressed={kind === option}
             onClick={() => setKind(option)}
             className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
               kind === option ? "bg-[#123a5a] text-white" : "bg-[#edf7ff] text-[#123a5a]"
@@ -72,6 +80,7 @@ export default function PostForm({ onPublished, profile }: Props) {
       </div>
 
       <input
+        aria-label="Título da publicação (opcional)"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         placeholder="Título da publicação (opcional)"
@@ -79,6 +88,7 @@ export default function PostForm({ onPublished, profile }: Props) {
       />
 
       <textarea
+        aria-label="Conteúdo da publicação"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder="Compartilhe oportunidades, eventos, projetos ou novidades..."
@@ -87,7 +97,7 @@ export default function PostForm({ onPublished, profile }: Props) {
       />
 
       {feedback && (
-        <p className={`mt-3 text-sm ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
+        <p role={feedback.type === "error" ? "alert" : "status"} className={`mt-3 text-sm ${feedback.type === "success" ? "text-emerald-600" : "text-red-600"}`}>
           {feedback.message}
         </p>
       )}
@@ -96,7 +106,7 @@ export default function PostForm({ onPublished, profile }: Props) {
         <button
           type="button"
           onClick={publish}
-          disabled={loading}
+          disabled={loading || !text.trim()}
           className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2d46] disabled:opacity-50"
         >
           {loading ? "Publicando..." : "Publicar"}

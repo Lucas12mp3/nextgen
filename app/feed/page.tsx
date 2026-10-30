@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "@/firebase/config";
@@ -16,13 +17,17 @@ export default function FeedPage() {
 	const [vagas, setVagas] = useState<Vaga[]>([]);
 	const [activeFilter, setActiveFilter] = useState<"all" | "post" | "vaga" | "evento">("all");
 	const [loading, setLoading] = useState(true);
+	const [postsError, setPostsError] = useState("");
+	const [jobsError, setJobsError] = useState("");
 
 	useEffect(() => {
 		let stopVagas: (() => void) | undefined;
 		const unsubAuth = onAuthStateChanged(auth, async (u) => {
 			stopVagas?.();
 			setVagas([]);
-			if (u) stopVagas = subscribeVagas(items => setVagas(items), () => setVagas([]));
+			setProfile(null);
+			setJobsError("");
+			if (u) stopVagas = subscribeVagas(items => setVagas(items), () => setJobsError("Não foi possível carregar as vagas. Tente atualizar a página."));
 			setUser(u);
 			if (u) {
 				try {
@@ -32,10 +37,10 @@ export default function FeedPage() {
 			} else {
 				setProfile(null);
 			}
-			setLoading(false);
+
 		});
 
-		const unsubPosts = subscribeToPosts((items) => setPosts(items));
+		const unsubPosts = subscribeToPosts((items) => { setPosts(items); setLoading(false); setPostsError(""); }, () => { setPostsError("Não foi possível carregar as publicações. Atualize a página para tentar novamente."); setLoading(false); });
 
 		return () => {
 			unsubAuth();
@@ -60,37 +65,81 @@ export default function FeedPage() {
 				<div className="mb-6 flex flex-col gap-4 rounded-[28px] border border-[#dfeeff] bg-white/80 p-5 shadow-[0_20px_60px_rgba(18,58,90,0.08)] backdrop-blur md:flex-row md:items-center md:justify-between">
 					<div>
 						<p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6b8eb8]">NextGen</p>
-						<h1 className="mt-2 text-3xl font-black text-[#123a5a]">Feed Global</h1>
+						<h1 className="mt-2 text-3xl font-black text-[#123a5a]">Feed da comunidade</h1>
+						<p className="mt-2 max-w-xl text-sm leading-6 text-slate-600">Conexões, ideias e oportunidades para o seu próximo passo.</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
 						<span className="rounded-full bg-[#edf6ff] px-3 py-1.5 text-xs font-semibold text-[#123a5a]">{posts.length} publicações</span>
 						<span className="rounded-full bg-[#eafaf2] px-3 py-1.5 text-xs font-semibold text-[#1d7a52]">{vagasAbertas.length} vagas abertas</span>
 						{user && (
-							<a
+							<Link
 								href={profile?.tipoConta === "empresa" ? "/perfils/empresa" : "/perfils/estudante"}
 								className="inline-flex items-center justify-center rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:bg-[#0f2f4d]"
 							>
 								Meu perfil
-							</a>
+							</Link>
 						)}
 					</div>
 				</div>
 
-				<section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+				<section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
 					<div className="space-y-6">
 						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-4 shadow-sm sm:p-5">
-							<PostForm profile={profile ?? undefined} />
+							{user ? <PostForm profile={profile ?? undefined} /> : <div className="p-3"><h2 className="text-lg font-bold text-[#123a5a]">Participe da conversa</h2><p className="mt-2 text-sm text-slate-600">Entre para compartilhar novidades, curtir e comentar.</p><Link href="/login" className="mt-4 inline-flex rounded-full bg-[#123a5a] px-5 py-2 text-sm font-semibold text-white">Entrar na comunidade</Link></div>}
 						</div>
 
+						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
+							<div className="mb-4 flex flex-col gap-3">
+								<div className="flex items-center justify-between gap-3">
+									<div>
+										<p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6b8eb8]">Seção</p>
+										<h2 className="mt-1 text-lg font-black text-[#123a5a]">Publicações</h2>
+									</div>
+									<span className="rounded-full bg-[#edf6ff] px-2.5 py-1 text-xs font-bold text-[#123a5a]">{visiblePosts.length}</span>
+								</div>
+								<div className="flex flex-wrap gap-2">
+									{filterOptions.map((option) => (
+										<button
+											key={option.key}
+											type="button"
+											aria-pressed={activeFilter === option.key}
+											onClick={() => setActiveFilter(option.key)}
+											className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+												activeFilter === option.key
+													? "bg-[#123a5a] text-white shadow-md shadow-blue-200"
+													: "bg-[#f3f8ff] text-[#123a5a] hover:bg-[#edf6ff]"
+											}`}
+										>
+											{option.label}
+										</button>
+									))}
+								</div>
+							</div>
+
+							{postsError ? <p role="alert" className="rounded-2xl bg-red-50 p-5 text-sm text-red-700">{postsError}</p> : loading ? (
+								<div className="rounded-2xl border border-[#dfeeff] bg-[#f9fcff] p-6 text-center text-sm text-slate-600">Carregando publicações...</div>
+							) : visiblePosts.length === 0 ? (
+								<div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f7fbff] p-6 text-center text-sm text-slate-600">Nenhuma publicação nesta categoria no momento.</div>
+							) : (
+								<div className="space-y-4">
+									{visiblePosts.map((p) => (
+										<PostItem key={p.id} post={p} currentUid={user?.uid ?? null} />
+									))}
+								</div>
+							)}
+						</div>
+					</div>
+
+					<aside className="space-y-6">
 						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
 							<div className="mb-4 flex items-center justify-between gap-3">
 								<div>
 									<p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6b8eb8]">Seção</p>
 									<h2 className="mt-1 text-lg font-black text-[#123a5a]">Vagas disponíveis</h2>
 								</div>
-								<a href="/vagas" className="text-sm font-semibold text-[#123a5a] underline">Ver todas</a>
+								<Link href="/vagas" className="text-sm font-semibold text-[#123a5a] underline">Ver todas</Link>
 							</div>
-							{vagasAbertas.length === 0 ? (
+							{jobsError ? <p role="alert" className="text-sm text-red-700">{jobsError}</p> : !user ? <p className="text-sm text-slate-600">Entre na sua conta para consultar as oportunidades.</p> : vagasAbertas.length === 0 ? (
 								<div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f7fbff] p-4 text-sm text-slate-600">Nenhuma vaga aberta no momento.</div>
 							) : (
 								<div className="space-y-3">
@@ -109,48 +158,7 @@ export default function FeedPage() {
 							)}
 						</div>
 
-						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
-							<div className="mb-4 flex flex-col gap-3">
-								<div className="flex items-center justify-between gap-3">
-									<div>
-										<p className="text-xs font-bold uppercase tracking-[0.18em] text-[#6b8eb8]">Seção</p>
-										<h2 className="mt-1 text-lg font-black text-[#123a5a]">Publicações</h2>
-									</div>
-									<span className="rounded-full bg-[#edf6ff] px-2.5 py-1 text-xs font-bold text-[#123a5a]">{visiblePosts.length}</span>
-								</div>
-								<div className="flex flex-wrap gap-2">
-									{filterOptions.map((option) => (
-										<button
-											key={option.key}
-											type="button"
-											onClick={() => setActiveFilter(option.key)}
-											className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-												activeFilter === option.key
-													? "bg-[#123a5a] text-white shadow-md shadow-blue-200"
-													: "bg-[#f3f8ff] text-[#123a5a] hover:bg-[#edf6ff]"
-											}`}
-										>
-											{option.label}
-										</button>
-									))}
-								</div>
-							</div>
 
-							{loading ? (
-								<div className="rounded-2xl border border-[#dfeeff] bg-[#f9fcff] p-6 text-center text-sm text-slate-600">Carregando publicações...</div>
-							) : visiblePosts.length === 0 ? (
-								<div className="rounded-2xl border border-dashed border-[#cfe8ff] bg-[#f7fbff] p-6 text-center text-sm text-slate-600">Nenhuma publicação nesta categoria no momento.</div>
-							) : (
-								<div className="space-y-4">
-									{visiblePosts.map((p) => (
-										<PostItem key={p.id} post={p} currentUid={user?.uid ?? null} />
-									))}
-								</div>
-							)}
-						</div>
-					</div>
-
-					<aside className="space-y-6">
 						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
 							<h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#123a5a]">Painel</h3>
 							<div className="mt-4 grid grid-cols-2 gap-3">
@@ -173,11 +181,11 @@ export default function FeedPage() {
 						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
 							<h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#123a5a]">Ações rápidas</h3>
 							<div className="mt-4 space-y-2">
-								<a href="/vagas" className="block rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-4 py-2 text-center text-sm font-semibold text-[#123a5a] transition hover:bg-[#edf6ff]">Explorar vagas</a>
+								<Link href="/vagas" className="block rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-4 py-2 text-center text-sm font-semibold text-[#123a5a] transition hover:bg-[#edf6ff]">Explorar vagas</Link>
 								{user ? (
-									<a href={profile?.tipoConta === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="block rounded-full bg-[#123a5a] px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-[#0f2f4d]">Ir para o perfil</a>
+									<Link href={profile?.tipoConta === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} className="block rounded-full bg-[#123a5a] px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-[#0f2f4d]">Ir para o perfil</Link>
 								) : (
-									<a href="/login" className="block rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-center text-sm font-semibold text-[#123a5a] transition hover:bg-[#f5fbff]">Entrar</a>
+									<Link href="/login" className="block rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-center text-sm font-semibold text-[#123a5a] transition hover:bg-[#f5fbff]">Entrar</Link>
 								)}
 							</div>
 						</div>

@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import dynamic from "next/dynamic";
-import Header from "@/components/Header";
 import { auth, db } from "@/firebase/config";
 import { subscribeVagas, type Vaga } from "@/services/vagas";
 import BrandLogo from "@/components/BrandLogo";
@@ -79,7 +78,6 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] text-slate-800">
-      <Header />
 
       <section id="sobre" className="mx-auto grid w-full max-w-7xl items-center gap-12 px-6 pb-16 pt-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-10 lg:pb-20 lg:pt-14">
         <div>
