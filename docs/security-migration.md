@@ -1,5 +1,7 @@
 # Migração de segurança Firebase
 
+> Documento histórico da migração com Functions. Para a arquitetura atual, consulte `fluxo-principal.md`, `admin-panel.md`, `applications-spark.md` e `chat.md`. Não execute este procedimento como requisito do cadastro novo: ele contém operações sobre dados antigos, revogação de links e redefinição de empresas que exigem revisão e backup. Não foi executado nesta etapa.
+
 O repositório agora usa Firebase Functions em `southamerica-east1` (Node.js 22). O projeto ainda não tem Functions nem Emulator configurados. Não executei deploy nem migração de dados.
 
 ## Antes de publicar regras/functions
