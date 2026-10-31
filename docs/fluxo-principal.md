@@ -45,4 +45,4 @@ O emulador requer Java 21+ e usa somente o projeto fictício `demo-nextgen-chat`
 
 ## Próximos passos
 
-Seguir `plano-tcc.md`. Desafios ainda usam Functions para criar, fechar e corrigir. A correção não foi movida para o navegador: isso permitiria manipular resultados ou revelar gabaritos. Currículos ainda dependem da disponibilidade e das regras do Storage, conforme `applications-spark.md`.
+Seguir `plano-tcc.md`. Desafios agora usam a API do Next.js e dependem da credencial privada configurada no servidor, conforme `desafios-ranking.md`. Currículos ainda dependem da disponibilidade e das regras do Storage, conforme `applications-spark.md`.

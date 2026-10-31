@@ -20,7 +20,7 @@ O painel mostra indicadores, empresas, publicações e usuários, permite aprova
 
 As regras verificam a existência de `admins/{UID}` em cada operação administrativa. Aprovações alteram somente os campos de revisão. Alterações administrativas usam transações para gravar a ação e o histórico juntos. O histórico não pode ser editado nem excluído pelos clientes. Advertências são privadas e o destinatário pode somente confirmar a leitura. Administradores podem ler os dados privados das empresas para conferir o CNPJ; há compatibilidade com o campo CNPJ antigo no documento da empresa.
 
-Outras funcionalidades do site (cadastro, currículos, vagas, candidaturas, propostas e correção de desafios) ainda usam Functions. Esta adaptação remove a dependência do painel administrativo, não de todo o site. As orientações de migração de dados privados em `security-migration.md` continuam relevantes.
+Cadastro, vagas, candidaturas, propostas, perfis e chat usam os serviços diretos documentados em `fluxo-principal.md`, `applications-spark.md` e `chat.md`. A correção dos desafios usa a API protegida do Next.js, conforme `desafios-ranking.md`. As orientações históricas de migração de dados privados em `security-migration.md` continuam relevantes para revisar registros antigos.
 
 ## Validação
 

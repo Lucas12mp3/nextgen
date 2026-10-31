@@ -15,19 +15,22 @@ Critério de conclusão: criar contas de estudante e empresa, aprovar empresa, p
 
 Entrega inicial: implementação e testes de cadastro/publicação, recuperação de senha e remoção das estatísticas fictícias de uso. Consulte `fluxo-principal.md` para publicar e ensaiar. Ainda é necessário testar a interface autenticada no ambiente de demonstração e auditar dados antigos; os testes de emulador não confirmam o estado do projeto publicado.
 
-## 2. Resolver desafios e ranking — próxima etapa
+## 2. Resolver desafios e ranking — implementado e testado; ativação na Vercel pendente
 
-- Revisar criação, fechamento e correção, que ainda chamam Functions.
-- Escolher execução confiável para a correção, como uma rota de servidor na hospedagem já usada. Não expor gabaritos nem permitir que o aluno atribua a própria nota para eliminar a dependência de Functions.
-- Conferir tentativa duplicada, cálculo de pontos e ranking com testes.
-- Se a infraestrutura da correção não estiver disponível, delimitar essa funcionalidade como futura e não colocá-la no roteiro principal de demonstração.
+- Criação, fechamento e correção agora usam a API do Next.js com autenticação e gabarito privado no servidor.
+- Tentativa única, incluindo reprovação, com resultado persistido e envio idempotente. Envios concorrentes não duplicam conquistas/pontos.
+- Ranking considera apenas conquistas verificadas, com validação da pontuação, deduplicação e desempate estável.
+- Configurar a credencial privada na Vercel, publicar as regras e ensaiar a interface autenticada. Consulte `desafios-ranking.md`.
+- Republicar os desafios da demonstração. Dados antigos não foram apagados e não ganham verificação automaticamente.
 
 Critério de conclusão: respostas e pontuação verificadas em ambiente confiável, com gabaritos inacessíveis ao estudante e resultado reproduzível.
+
+Os testes de emulador e o build passaram. A configuração de produção ainda não foi aplicada nesta etapa; sem ela, o site informa indisponibilidade da publicação/correção. A próxima frente de código é privacidade/acabamento, seguida da documentação da banca.
 
 ## 3. Privacidade e acabamento
 
 - Auditar documentos antigos: o cadastro novo separa dados privados, mas não migra registros antigos automaticamente.
-- Substituir estatísticas inventadas da página inicial por informação comprovável.
+- Estatísticas fictícias de uso já foram substituídas por destaques da plataforma. Revisar os exemplos ilustrativos restantes antes da apresentação.
 - Revisar links, estados vazios, erros e acesso sem login em todas as rotas.
 - Conferir as telas principais em celular, teclado e preferência de movimento reduzido.
 - Revisar o fluxo de currículo e a disponibilidade do Storage do projeto.
