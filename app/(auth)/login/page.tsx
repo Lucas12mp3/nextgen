@@ -6,6 +6,7 @@ import { entrar } from "@/services/autenticar";
 import { db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import BrandLogo from "@/components/BrandLogo";
+import { authErrorMessage } from "@/services/auth-errors";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -16,6 +17,7 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (carregando) return;
     setErro("");
     setCarregando(true);
 
@@ -24,13 +26,14 @@ export default function LoginPage() {
       // busca perfil no Firestore para decidir para onde redirecionar
       const profileSnap = await getDoc(doc(db, "users", user.uid));
       const data = profileSnap.exists() ? (profileSnap.data() as Record<string, unknown>) : null;
+      if (!data) throw new Error("Seu perfil não foi encontrado. Procure a administração para concluir a recuperação do cadastro.");
       if (data && data.tipoConta === "empresa") {
         router.push("/perfils/empresa");
       } else {
         router.push("/perfils/estudante");
       }
-    } catch {
-      setErro("E-mail ou senha incorretos.");
+    } catch (error) {
+      setErro(authErrorMessage(error, "Não foi possível entrar. Tente novamente."));
     } finally {
       setCarregando(false);
     }
@@ -71,8 +74,10 @@ export default function LoginPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
+                <label htmlFor="login-email" className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
                 <input
+                  id="login-email"
+                  autoComplete="email"
                   type="email"
                   placeholder="seuemail@email.com"
                   value={email}
@@ -83,8 +88,10 @@ export default function LoginPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Senha</label>
+                <label htmlFor="login-password" className="mb-2 block text-sm font-semibold text-slate-700">Senha</label>
                 <input
+                  id="login-password"
+                  autoComplete="current-password"
                   type="password"
                   placeholder="••••••••"
                   value={senha}
@@ -94,7 +101,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              {erro && <p className="text-sm font-medium text-red-500">{erro}</p>}
+              {erro && <p role="alert" className="text-sm font-medium text-red-500">{erro}</p>}
 
               <button
                 type="submit"

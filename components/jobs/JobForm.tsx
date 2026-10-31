@@ -67,7 +67,7 @@ export default function JobForm({ onCreated }: JobFormProps) {
       onCreated?.();
     } catch (err) {
       console.error(err);
-      setError("Não foi possível publicar a vaga. Tente novamente.");
+      setError((err as { code?: string }).code === "permission-denied" ? "Não foi possível publicar. Confirme a aprovação da empresa e a publicação das regras do Firestore." : err instanceof Error ? err.message : "Não foi possível publicar a vaga. Tente novamente.");
     } finally {
       setSaving(false);
     }

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { cadastrar } from "@/services/autenticar";
 import BrandLogo from "@/components/BrandLogo";
+import { authErrorMessage } from "@/services/auth-errors";
 
 export default function CadastroPage() {
   const [nome, setNome] = useState("");
@@ -87,7 +88,7 @@ export default function CadastroPage() {
       else router.push("/perfils/estudante");
     } catch (err) {
       console.error(err);
-      setErro("Erro ao criar conta. Verifique os dados e tente novamente.");
+      setErro(authErrorMessage(err, "Erro ao criar conta. Verifique os dados e tente novamente."));
     } finally {
       setCarregando(false);
     }
