@@ -1,4 +1,4 @@
-import { createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, signInWithEmailAndPassword, signOut, updatePassword, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updatePassword, updateProfile } from "firebase/auth";
 import { doc, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { registrationData } from "./registration-policy";
@@ -30,6 +30,10 @@ export async function cadastrar(payload: CadastroPayload) {
     await deleteUser(cred.user).catch(() => undefined);
     throw error;
   }
+}
+
+export async function recuperarSenha(email: string) {
+  await sendPasswordResetEmail(auth, email.trim());
 }
 
 export async function entrar(email: string, senha: string) { return (await signInWithEmailAndPassword(auth, email, senha)).user; }

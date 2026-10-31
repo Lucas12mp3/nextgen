@@ -104,6 +104,7 @@ export default function LoginPage() {
                 {carregando ? "Entrando..." : "Entrar"}
               </button>
             </form>
+            <div className="mt-4 text-right"><Link href="/recuperar-senha" className="text-sm font-semibold text-[#123a5a] underline">Esqueci minha senha</Link></div>
 
             <div className="mt-6 space-y-3 text-center text-sm text-slate-600">
               <Link
