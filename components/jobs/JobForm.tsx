@@ -21,6 +21,7 @@ export default function JobForm({ onCreated }: JobFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (saving) return;
     const user = auth.currentUser;
 
     if (!user) {
@@ -82,6 +83,8 @@ export default function JobForm({ onCreated }: JobFormProps) {
         <label className="md:col-span-2 block">
           <span className="mb-1 block text-sm font-semibold text-slate-700">Título da vaga</span>
           <input
+            required
+            maxLength={160}
             value={titulo}
             onChange={(e) => setTitulo(e.target.value)}
             className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f9fcff] px-4 py-2.5 text-sm outline-none transition focus:border-[#9ad4ff]"
@@ -92,6 +95,8 @@ export default function JobForm({ onCreated }: JobFormProps) {
         <label className="md:col-span-2 block">
           <span className="mb-1 block text-sm font-semibold text-slate-700">Descrição</span>
           <textarea
+            required
+            maxLength={5000}
             value={descricao}
             onChange={(e) => setDescricao(e.target.value)}
             rows={4}
@@ -103,6 +108,8 @@ export default function JobForm({ onCreated }: JobFormProps) {
         <label className="md:col-span-2 block">
           <span className="mb-1 block text-sm font-semibold text-slate-700">Requisitos</span>
           <textarea
+            required
+            maxLength={3000}
             value={requisitos}
             onChange={(e) => setRequisitos(e.target.value)}
             rows={3}
@@ -135,8 +142,8 @@ export default function JobForm({ onCreated }: JobFormProps) {
         </label>
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-3 text-sm text-emerald-600">{success}</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
+      {success && <p role="status" className="mt-3 text-sm text-emerald-600">{success}</p>}
 
       <div className="mt-4 flex justify-end">
         <button

@@ -85,3 +85,30 @@ test("cadastro não permite expor CPF, criar administrador ou autoaprovar empres
   await assertSucceeds(registration("company", "empresa"));
   await assertFails(updateDoc(doc(db("company"), "users", "company"), { companyStatus: "verified" }));
 });
+test("aprovação administrativa libera publicação e candidatura pelo serviço real", async () => {
+  await registration("company", "empresa"); await registration("student");
+  const jobs = loadService("services/vagas.ts", "company");
+  const payload = { empresaId: "company", empresaNome: "Nome forjado", titulo: "Aprendiz em tecnologia", descricao: "Apoio à equipe e aprendizado supervisionado.", requisitos: "Interesse em tecnologia e disponibilidade para aprender.", modalidade: "Remoto", local: "São Paulo, SP", status: "aberta" };
+  await assert.rejects(jobs.criarVaga(payload), /aprovação/);
+  const adminBatch = writeBatch(db("admin"));
+  adminBatch.update(doc(db("admin"), "users", "company"), { companyStatus: "verified", companyReviewedAt: serverTimestamp(), companyReviewedBy: "admin", companyReviewAuditId: "approve-company" });
+  adminBatch.set(doc(db("admin"), "adminAudit", "approve-company"), { action: "companyAuthorization", targetId: "company", status: "verified", previousStatus: "pending", reason: "Dados da empresa conferidos para demonstração.", adminUid: "admin", createdAt: serverTimestamp() });
+  await assertSucceeds(adminBatch.commit());
+  const jobId = await jobs.criarVaga(payload);
+  assert.equal((await getDoc(doc(db("student"), "vagas", jobId))).get("empresaNome"), "Empresa Demonstração");
+  const applications = loadService("services/applications.ts", "student");
+  const applicationId = await applications.sendApplication({ fromUserId: "student", vagaId: jobId });
+  await assertFails(applications.sendApplication({ fromUserId: "student", vagaId: jobId }));
+  await assertSucceeds(getDoc(doc(db("company"), "applications", applicationId)));
+  await assertSucceeds(updateDoc(doc(db("company"), "applications", applicationId), { status: "reviewed", read: true }));
+  assert.equal((await getDoc(doc(db("student"), "applications", applicationId))).get("status"), "reviewed");
+});
+test("regras rejeitam vaga de estudante, autoria forjada e campos excessivos", async () => {
+  await registration("student"); await registration("company", "empresa");
+  await env.withSecurityRulesDisabled(async context => updateDoc(doc(context.firestore(), "users", "company"), { companyStatus: "verified" }));
+  const base = { empresaId: "company", empresaNome: "Empresa Demonstração", titulo: "Vaga", descricao: "Descrição", requisitos: "Requisitos", modalidade: "Remoto", local: "Brasil", status: "aberta", createdAt: serverTimestamp() };
+  await assertFails(setDoc(doc(db("student"), "vagas", "forged"), base));
+  await assertFails(setDoc(doc(db("company"), "vagas", "wrong-name"), { ...base, empresaNome: "Outra empresa" }));
+  await assertFails(setDoc(doc(db("company"), "vagas", "large-title"), { ...base, titulo: "x".repeat(161) }));
+  await assertFails(setDoc(doc(db("company"), "vagas", "extra"), { ...base, admin: true }));
+});

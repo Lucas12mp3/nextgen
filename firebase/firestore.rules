@@ -221,6 +221,16 @@ service cloud.firestore {
     }
 
     match /vagas/{vagaId} {
+      allow create: if signedIn() && verifiedCompany(request.auth.uid)
+        && request.resource.data.keys().hasOnly(["empresaId", "empresaNome", "titulo", "descricao", "requisitos", "modalidade", "local", "status", "createdAt"])
+        && request.resource.data.empresaId == request.auth.uid
+        && request.resource.data.empresaNome == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.nome
+        && request.resource.data.titulo is string && request.resource.data.titulo.size() > 0 && request.resource.data.titulo.size() <= 160
+        && request.resource.data.descricao is string && request.resource.data.descricao.size() > 0 && request.resource.data.descricao.size() <= 5000
+        && request.resource.data.requisitos is string && request.resource.data.requisitos.size() > 0 && request.resource.data.requisitos.size() <= 3000
+        && request.resource.data.local is string && request.resource.data.local.size() > 0 && request.resource.data.local.size() <= 200
+        && request.resource.data.modalidade in ["Presencial", "Híbrido", "Remoto"]
+        && request.resource.data.status == "aberta" && request.resource.data.createdAt == request.time;
       allow read: if signedIn();
       allow create, delete: if false; // created by Functions
       allow update: if signedIn() && resource.data.empresaId == request.auth.uid
