@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:challenges:unit": "node --test tests/challenge-policy.test.cjs",
     "test:challenges": "firebase emulators:exec --only auth,firestore --project demo-nextgen-chat --config firebase.chat-test.json \"node --test --test-concurrency=1 tests/challenge-api.test.mjs tests/core-rules.test.mjs tests/chat-rules.test.mjs\"",
     "test:chat:unit": "node --test tests/chat-policy.test.cjs",
     "test:core:unit": "node --test tests/registration-policy.test.cjs tests/applications.test.cjs",

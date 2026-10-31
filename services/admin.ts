@@ -29,7 +29,7 @@ async function call<T>(name: string, data: Record<string, unknown> = {}): Promis
       users: collection(db, "users"), students: query(collection(db, "users"), where("tipoConta", "==", "estudante")),
       companies: query(collection(db, "users"), where("tipoConta", "==", "empresa")), pendingCompanies: query(collection(db, "users"), where("companyStatus", "==", "pending")),
       openJobs: query(collection(db, "vagas"), where("status", "==", "aberta")), posts: collection(db, "posts"), applications: collection(db, "applications"),
-      openChallenges: query(collection(db, "desafios"), where("status", "==", "aberto")),
+    openChallenges: query(collection(db, "desafios"), where("status", "==", "aberto"), where("scoringVersion", "==", 2)),
     };
     const counts = Object.fromEntries(await Promise.all(Object.entries(sources).map(async ([key, source]) => [key, (await getCountFromServer(source)).data().count])));
     const audit = await getDocs(query(collection(db, "adminAudit"), orderBy("createdAt", "desc"), limit(15)));

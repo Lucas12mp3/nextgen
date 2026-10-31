@@ -34,7 +34,7 @@ function client(actor) {
   vm.runInThisContext(`(function(exports, require, fetch) { ${code} })`)(exports, name => {
     if (name === "firebase/firestore") return clientSDK;
     if (name === "@/firebase/config") return { auth: { currentUser: { uid: actor.uid, getIdToken: async () => actor.token } }, db: env.authenticatedContext(actor.uid).firestore() };
-    if (name === "@/lib/challenge-policy") return load("lib/challenge-policy.ts");
+    if (name.startsWith("@/lib/")) return load(name.slice(2) + ".ts");
     throw new Error(`Unexpected client import ${name}`);
   }, async (path, options) => {
     const route = path.endsWith("/tentativa") ? routes().submit : path.endsWith("/fechar") ? routes().close : routes().create;
@@ -155,6 +155,15 @@ test("serviços do navegador publicam, listam, respondem, recuperam e fecham via
   const result = await studentClient.enviarTentativa(id, [1, 1]);
   assert.equal(result.nota, 100);
   assert.equal((await studentClient.getResultado(id)).nota, 100);
+  await admin.db.doc("conquistas/legacy-score").set({ userId: student.uid, desafioId: "old", nota: 100, pontos: 50000 });
+  const ranking = await new Promise((resolve, reject) => {
+    const stop = studentClient.subscribeRankingGeral(items => { stop(); resolve(items); }, reject);
+  });
+  assert.equal(ranking.length, 1); assert.equal(ranking[0].totalPontos, 100); assert.equal(ranking[0].desafiosConcluidos, 1);
+  const achievements = await new Promise((resolve, reject) => {
+    const stop = studentClient.subscribeConquistas(student.uid, items => { stop(); resolve(items); }, reject);
+  });
+  assert.equal(achievements.length, 1);
   await companyClient.fecharDesafio(id);
   assert.equal((await studentClient.getDesafio(id)).status, "fechado");
 });

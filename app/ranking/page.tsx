@@ -36,6 +36,7 @@ export default function RankingPage() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] p-6 text-slate-800 md:p-8">
       <div className="mx-auto max-w-6xl">
+        <p className="mb-5 rounded-2xl border border-[#dfeeff] bg-white p-4 text-sm leading-6 text-slate-600">O ranking considera conquistas com correção verificada. Cada desafio pontua uma vez. A classificação prioriza o total de pontos e, em caso de empate, a melhor nota.</p>
         <div className="mb-6 flex flex-col gap-4 rounded-[28px] border border-[#dfeeff] bg-white p-5 shadow-[0_18px_54px_rgba(18,58,90,0.08)] md:flex-row md:items-center md:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#6b8eb8]">NextGen</p>
