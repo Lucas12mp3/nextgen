@@ -8,6 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { RequireProfileType } from "@/components/auth/RequireProfileType";
 import { calcularPontosDesafio, subscribeConquistas, subscribeRankingGeral, type Conquista, type RankingItem } from "@/services/desafios";
 import { openResumeInNewTab } from "@/services/perfil";
+import { ageFromDate } from "@/services/registration-policy";
 
 type StudentProfile = {
   nome?: string;
@@ -23,7 +24,7 @@ type StudentProfile = {
 };
 
 type PrivateStudentProfile = {
-  dataNascimento?: string | Date;
+  dataNascimento?: string | Date | { toDate(): Date };
   resumeObjectPath?: string;
 };
 
@@ -76,11 +77,14 @@ export default function PerfilEstudantePage() {
     0
   );
   const posicaoRanking = ranking.findIndex((item) => item.userId === user?.uid) + 1;
-  const idadeTexto =
-    profile?.faixaEtaria ??
-    (privateProfile?.dataNascimento
-      ? `${Math.max(0, new Date().getFullYear() - new Date(privateProfile.dataNascimento).getFullYear())} anos`
-      : "");
+  let idadeTexto = profile?.faixaEtaria || "";
+  const birth = privateProfile?.dataNascimento;
+  if (!idadeTexto && birth) {
+    try {
+      const value = typeof birth === "string" ? birth.slice(0, 10) : ("toDate" in birth ? birth.toDate() : birth).toISOString().slice(0, 10);
+      idadeTexto = `${ageFromDate(value)} anos`;
+    } catch { idadeTexto = ""; }
+  }
 
   const formatarData = (value: unknown) => {
     if (value && typeof value === "object" && "seconds" in value && typeof (value as { seconds?: number }).seconds === "number") {

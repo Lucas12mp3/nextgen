@@ -1,6 +1,7 @@
-import { httpsCallable } from "firebase/functions";
 import { createUserWithEmailAndPassword, deleteUser, EmailAuthProvider, reauthenticateWithCredential, signInWithEmailAndPassword, signOut, updatePassword, updateProfile } from "firebase/auth";
-import { auth, functions } from "@/firebase/config";
+import { doc, serverTimestamp, Timestamp, writeBatch } from "firebase/firestore";
+import { auth, db } from "@/firebase/config";
+import { registrationData } from "./registration-policy";
 
 export type CadastroPayload = {
   nome: string;
@@ -14,11 +15,16 @@ export type CadastroPayload = {
 };
 
 export async function cadastrar(payload: CadastroPayload) {
-  const cred = await createUserWithEmailAndPassword(auth, payload.email, payload.senha);
+  const data = registrationData(payload);
+  const cred = await createUserWithEmailAndPassword(auth, payload.email.trim(), payload.senha);
   try {
-    await updateProfile(cred.user, { displayName: payload.nome });
-    const complete = httpsCallable(functions, "completeRegistration");
-    await complete({ nome: payload.nome, tipoConta: payload.tipoConta, cpf: payload.cpf, cnpj: payload.cnpj, dataNascimento: payload.dataNascimento, ramo: payload.ramo });
+    await updateProfile(cred.user, { displayName: data.nome });
+    const batch = writeBatch(db);
+    batch.set(doc(db, "users", cred.user.uid), { uid: cred.user.uid, nome: data.nome, tipoConta: payload.tipoConta,
+      ...(payload.tipoConta === "empresa" ? { ramo: data.ramo, companyStatus: "pending" } : {}), createdAt: serverTimestamp() });
+    batch.set(doc(db, "users", cred.user.uid, "privado", "dados"), { dataNascimento: data.birthDate ? Timestamp.fromDate(data.birthDate) : null,
+      cpf: data.cpf, cnpj: data.cnpj, responsavel: null, createdAt: serverTimestamp() });
+    await batch.commit();
     return cred.user;
   } catch (error) {
     await deleteUser(cred.user).catch(() => undefined);

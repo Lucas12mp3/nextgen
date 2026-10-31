@@ -5,6 +5,10 @@ service cloud.firestore {
     function profileText(data, key, maxSize) {
       return data.get(key, "") is string && data.get(key, "").size() <= maxSize;
     }
+    function registrationAge(dob) {
+      return request.time.year() - dob.year()
+        - ((request.time.month() < dob.month() || (request.time.month() == dob.month() && request.time.day() < dob.day())) ? 1 : 0);
+    }
     function isAdmin() {
       return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
@@ -111,6 +115,17 @@ service cloud.firestore {
 
     // These documents are directory-safe only after the one-time migration removes email/resumeUrl.
     match /users/{userId} {
+      function validRegistration() {
+        let data = request.resource.data;
+        return signedIn() && request.auth.uid == userId
+          && data.uid == userId && data.nome is string && data.nome.size() > 0 && data.nome.size() <= 120
+          && data.createdAt == request.time
+          && ((data.tipoConta == "estudante" && data.keys().hasOnly(["uid", "nome", "tipoConta", "createdAt"]))
+            || (data.tipoConta == "empresa" && data.keys().hasOnly(["uid", "nome", "tipoConta", "ramo", "companyStatus", "createdAt"])
+              && data.companyStatus == "pending" && data.ramo is string && data.ramo.size() <= 120))
+          && getAfter(/databases/$(database)/documents/users/$(userId)/privado/dados).data.createdAt == request.time;
+      }
+      allow create: if validRegistration();
       function validProfileEdit() {
         let data = request.resource.data;
         let changed = data.diff(resource.data).affectedKeys();
@@ -137,7 +152,19 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/adminAudit/$(request.resource.data.companyReviewAuditId)).data.targetId == userId
         && getAfter(/databases/$(database)/documents/adminAudit/$(request.resource.data.companyReviewAuditId)).data.status == request.resource.data.companyStatus
         && getAfter(/databases/$(database)/documents/adminAudit/$(request.resource.data.companyReviewAuditId)).data.createdAt == request.time;
-      match /privado/{document=**} {
+      match /privado/{document} {
+        allow create: if signedIn() && request.auth.uid == userId && document == "dados"
+          && !exists(/databases/$(database)/documents/users/$(userId))
+          && request.resource.data.keys().hasOnly(["dataNascimento", "cpf", "cnpj", "responsavel", "createdAt"])
+          && request.resource.data.createdAt == request.time && request.resource.data.responsavel == null
+          && getAfter(/databases/$(database)/documents/users/$(userId)).data.createdAt == request.time
+          && ((getAfter(/databases/$(database)/documents/users/$(userId)).data.tipoConta == "estudante"
+            && request.resource.data.cpf is string && request.resource.data.cpf.matches("[0-9]{11}")
+            && request.resource.data.cnpj == null && request.resource.data.dataNascimento is timestamp
+            && registrationAge(request.resource.data.dataNascimento) >= 16 && registrationAge(request.resource.data.dataNascimento) <= 120)
+          || (getAfter(/databases/$(database)/documents/users/$(userId)).data.tipoConta == "empresa"
+            && request.resource.data.cnpj is string && request.resource.data.cnpj.matches("[0-9]{14}")
+            && request.resource.data.cpf == null && request.resource.data.dataNascimento == null));
         allow read: if signedIn() && request.auth.uid == userId;
         allow read: if isAdmin();
         allow write: if false; // trusted Functions only

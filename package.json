@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "test:chat:unit": "node --test tests/chat-policy.test.cjs",
+    "test:core:unit": "node --test tests/registration-policy.test.cjs tests/applications.test.cjs",
+    "test:core": "firebase emulators:exec --only firestore --project demo-nextgen-chat --config firebase.chat-test.json \"node --test --test-concurrency=1 tests/core-rules.test.mjs tests/chat-rules.test.mjs\"",
     "test:chat": "firebase emulators:exec --only firestore --project demo-nextgen-chat --config firebase.chat-test.json \"node --test tests/chat-rules.test.mjs\""
   },
   "dependencies": {

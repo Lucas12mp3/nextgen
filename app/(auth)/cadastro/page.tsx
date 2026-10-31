@@ -22,6 +22,7 @@ export default function CadastroPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (carregando) return;
     setErro("");
     setCarregando(true);
 
@@ -187,7 +188,7 @@ export default function CadastroPage() {
             <ul className="mt-4 space-y-3 text-sm text-slate-700">
               <li>• jovem ou aprendiz em busca de estágio</li>
               <li>• empresa interessada em talentos</li>
-              <li>• instituição ou mentor apoiando o crescimento</li>
+              <li>• estudantes a partir de 16 anos</li>
             </ul>
           </div>
         </section>
@@ -229,13 +230,13 @@ export default function CadastroPage() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">
+                <label htmlFor="registration-field-1" className="mb-2 block text-sm font-semibold text-slate-700">
                   {tipoConta === "estudante" ? "Nome completo" : "Razão social / Nome da empresa"}
                 </label>
-                <input
+                <input id="registration-field-1"
                   type="text"
                   placeholder={tipoConta === "estudante" ? "Seu nome" : "Nome da empresa"}
-                  value={nome}
+                  autoComplete="name" maxLength={120} value={nome}
                   onChange={(e) => setNome(e.target.value)}
                   required
                   className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -243,11 +244,11 @@ export default function CadastroPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
-                <input
+                <label htmlFor="registration-field-2" className="mb-2 block text-sm font-semibold text-slate-700">E-mail</label>
+                <input id="registration-field-2"
                   type="email"
                   placeholder="seuemail@email.com"
-                  value={email}
+                  autoComplete="email" maxLength={254} value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -257,11 +258,11 @@ export default function CadastroPage() {
               {tipoConta === "estudante" ? (
                 <>
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">CPF</label>
-                    <input
+                    <label htmlFor="registration-field-3" className="mb-2 block text-sm font-semibold text-slate-700">CPF</label>
+                <input id="registration-field-3"
                       type="text"
                       placeholder="000.000.000-00"
-                      value={cpf}
+                      inputMode="numeric" maxLength={14} value={cpf}
                       onChange={handleCpfChange}
                       required
                       className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -269,10 +270,10 @@ export default function CadastroPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Data de Nascimento</label>
-                    <input
+                    <label htmlFor="registration-field-4" className="mb-2 block text-sm font-semibold text-slate-700">Data de Nascimento</label>
+                <input id="registration-field-4"
                       type="date"
-                      value={dataNascimento}
+                      autoComplete="bday" value={dataNascimento}
                       onChange={handleDataNascimentoChange}
                       required
                       className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -283,11 +284,11 @@ export default function CadastroPage() {
               ) : (
                 <>
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">CNPJ</label>
-                    <input
+                    <label htmlFor="registration-field-5" className="mb-2 block text-sm font-semibold text-slate-700">CNPJ</label>
+                <input id="registration-field-5"
                       type="text"
                       placeholder="00.000.000/0000-00"
-                      value={cnpj}
+                      inputMode="numeric" maxLength={18} value={cnpj}
                       onChange={handleCnpjChange}
                       required
                       className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -295,11 +296,11 @@ export default function CadastroPage() {
                   </div>
 
                   <div>
-                    <label className="mb-2 block text-sm font-semibold text-slate-700">Ramo de atuação</label>
-                    <input
+                    <label htmlFor="registration-field-6" className="mb-2 block text-sm font-semibold text-slate-700">Ramo de atuação</label>
+                <input id="registration-field-6"
                       type="text"
                       placeholder="Ex: Tecnologia, Educação, Saúde"
-                      value={ramo}
+                      maxLength={120} value={ramo}
                       onChange={(e) => setRamo(e.target.value)}
                       required
                       className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -309,12 +310,12 @@ export default function CadastroPage() {
               )}
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Senha</label>
-                <input
+                <label htmlFor="registration-field-7" className="mb-2 block text-sm font-semibold text-slate-700">Senha</label>
+                <input id="registration-field-7"
                   type="password"
                   placeholder="Mínimo 6 caracteres"
                   minLength={6}
-                  value={senha}
+                  autoComplete="new-password" value={senha}
                   onChange={(e) => setSenha(e.target.value)}
                   required
                   className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
@@ -322,19 +323,19 @@ export default function CadastroPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-700">Confirmar senha</label>
-                <input
+                <label htmlFor="registration-field-8" className="mb-2 block text-sm font-semibold text-slate-700">Confirmar senha</label>
+                <input id="registration-field-8"
                   type="password"
                   placeholder="Repita a senha"
                   minLength={6}
-                  value={confirmarSenha}
+                  autoComplete="new-password" value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   required
                   className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f8fbff] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#6fa8dc] focus:outline-none focus:ring-4 focus:ring-[#dfeeff]"
                 />
               </div>
 
-              {erro && <p className="text-sm font-medium text-red-500">{erro}</p>}
+              {erro && <p role="alert" className="text-sm font-medium text-red-500">{erro}</p>}
 
               <button
                 type="submit"
