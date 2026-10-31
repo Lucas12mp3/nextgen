@@ -8,7 +8,7 @@ As telas usam as rotas do próprio Next.js:
 - `POST /api/desafios/fechar`: a empresa proprietária fecha um desafio.
 - `POST /api/desafios/tentativa`: estudante envia respostas e recebe a nota calculada no servidor.
 - `GET /api/desafios/tentativa?id=ID`: consulta somente o resultado do usuário autenticado.
-- `GET /api/desafios`: informa apenas se a configuração privada está presente, para a tela desabilitar o envio quando o serviço ainda não estiver disponível.
+- `GET /api/desafios`: informa disponibilidade e um código de diagnóstico, sem retornar os valores das credenciais. A tela diferencia ativação pendente de falha de conexão e permite verificar novamente.
 
 As operações autenticadas validam o ID token do Firebase, inclusive conta desativada/sessão revogada, e conferem os perfis e a aprovação da empresa. O servidor deriva a identidade e o nome da empresa do banco. Não aceita nota/pontos enviados pelo estudante. Há verificação de origem, limite de tamanho do corpo e limite de frequência de criação por empresa. As respostas não são armazenadas em cache HTTP.
 
@@ -19,7 +19,9 @@ O Admin SDK acessa o banco no servidor e não depende das regras do cliente; por
 O código foi implementado e testado com emuladores. A ativação no projeto publicado depende da configuração de servidor abaixo. Não é necessário publicar Firebase Cloud Functions para este fluxo: a API executa na hospedagem do Next.js.
 
 1. No Console Firebase do projeto `nextgen-2d9df`, abra **Configurações do projeto → Contas de serviço**. Obtenha uma chave de uma conta de serviço autorizada do próprio projeto pelo fluxo oficial do Firebase.
-2. Na Vercel, abra o projeto do site em **Settings → Environment Variables** e configure no ambiente que será usado para a demonstração:
+2. Na Vercel, abra o projeto do site em **Settings → Environment Variables**. A opção mais simples é criar **uma única variável privada**, `FIREBASE_SERVICE_ACCOUNT_JSON`, e colar como valor o conteúdo completo do arquivo JSON da conta de serviço. O `project_id` dentro do JSON deve ser `nextgen-2d9df`. Essa variável não tem prefixo `NEXT_PUBLIC_`.
+
+Como alternativa, as três variáveis separadas continuam funcionando:
 
 | Variável de servidor | Valor |
 | --- | --- |
@@ -35,7 +37,9 @@ O código foi implementado e testado com emuladores. A ativação no projeto pub
 npx.cmd firebase-tools deploy --only firestore:rules --project nextgen-2d9df
 ```
 
-6. Confirme que `/api/desafios` responde `{"available":true}` e teste com uma empresa aprovada e uma conta de estudante. Esse indicador verifica a presença das variáveis; o teste autenticado confirma também se a credencial é válida e tem as permissões necessárias.
+6. Confirme que `/api/desafios` responde `{"available":true,"reason":"ready"}` e teste com uma empresa aprovada e uma conta de estudante. O indicador confere o formato da configuração, a chave RSA e a correspondência do projeto; o teste autenticado confirma também se a credencial foi revogada ou tem as permissões necessárias. Alterações nas variáveis da Vercel exigem um novo deploy para afetar o site.
+
+`missing-credentials` indica que a ativação ainda não foi configurada. `invalid-json`, `invalid-private-key`, `invalid-email` e `project-mismatch` indicam qual parte revisar. Nenhuma dessas respostas contém chave privada ou e-mail da conta de serviço.
 
 Se a configuração estiver ausente, o site mostra indisponibilidade e preserva a leitura do histórico verificado. Erros internos nunca retornam chaves, credenciais, caminhos de gabarito ou detalhes dos documentos para o navegador.
 
