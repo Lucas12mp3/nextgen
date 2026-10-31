@@ -52,15 +52,8 @@ export default function BrandLogo({
           }
           aria-label="NextGen"
         >
-          {"NextGen".split("").map((letter, index) => (
-            <span
-              key={`${letter}-${index}`}
-              className={`wordmark-letter ${letter === "G" || letter === "e" || letter === "n" ? "text-[#2a9df4]" : "text-[#123a5a]"}`}
-              style={{ transitionDelay: `${index * 18}ms` }}
-            >
-              {letter}
-            </span>
-          ))}
+          <span className="text-[#123a5a]">Next</span>
+          <span className="text-[#2a9df4]">Gen</span>
         </span>
       )}
     </div>

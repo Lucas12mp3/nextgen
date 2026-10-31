@@ -71,8 +71,8 @@ export default function Header() {
 
   return (
     <header className="relative z-40 mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-y-3 border-b border-[#dfeeff] bg-[#f6fbff] px-4 py-4 sm:px-6 lg:px-10">
-      <Link href="/" aria-label="NextGen — página inicial" onClick={() => { setMenuOpen(false); setMobileOpen(false); }} className="group flex items-center transition-transform duration-300 hover:scale-[1.02]">
-        <BrandLogo compact showWordmark className="group-hover:drop-shadow-[0_8px_24px_rgba(36,113,190,0.18)]" />
+      <Link href="/" aria-label="NextGen — página inicial" onClick={() => { setMenuOpen(false); setMobileOpen(false); }} className="brand-home-link flex items-center rounded-lg">
+        <BrandLogo compact showWordmark />
       </Link>
 
       <nav aria-label="Navegação principal" className="hidden items-center gap-1 text-sm font-medium text-slate-700 md:flex">
