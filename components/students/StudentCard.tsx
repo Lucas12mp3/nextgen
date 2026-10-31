@@ -1,6 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import ProposalForm from "@/components/proposals/ProposalForm";
+import Link from "next/link";
 
 type StudentCardProfile = {
   uid: string;
@@ -55,6 +56,7 @@ export default function StudentCard({ student, canPropose = false, challengeCoun
           )}
         </div>
       </div>
+      <Link href={`/mensagens?to=${encodeURIComponent(student.uid)}`} className="mt-4 block rounded-full border border-[#cfe8ff] px-4 py-2.5 text-center text-sm font-semibold text-[#123a5a] hover:bg-sky-50">Enviar mensagem</Link>
       {canPropose && <div className="mt-5 border-t border-[#edf3ff] pt-4">
         <button type="button" aria-expanded={contactOpen} aria-controls={contactId} onClick={() => setContactOpen(!contactOpen)} className="w-full rounded-full bg-[#123a5a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#20557e]">{contactOpen ? "Fechar proposta" : "Conversar sobre uma oportunidade"}</button>
         {contactOpen && <div id={contactId} className="mt-4 animate-enter"><ProposalForm toUserId={student.uid} /></div>}

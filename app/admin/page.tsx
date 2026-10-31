@@ -93,6 +93,7 @@ export default function AdminPage() {
         <div className="flex flex-wrap gap-2"><button disabled={busy} className={secondary} onClick={() => execute(async () => { const [summary, c, p, u] = await Promise.all([getAdminOverview(), listCompanies(), listPosts(), listUsers()]); setOverview(summary); setCompanies(c); setPosts(p); setUsers(u); }, "Painel atualizado.")}>Atualizar painel</button><Link className={secondary} href="/feed">Voltar ao site</Link></div>
       </header>
       <nav aria-label="Seções administrativas" className="flex flex-wrap gap-2">{([["overview", "Visão geral"], ["companies", "Empresas"], ["comments", "Comentários"], ["warnings", "Advertências"]] as [Tab, string][]).map(([key, label]) => <button key={key} disabled={busy} aria-pressed={tab === key} className={tab === key ? button : secondary} onClick={() => { setTab(key); setSearch(""); setError(""); setSuccess(""); }}>{label}</button>)}</nav>
+      <Link href="/admin/mensagens" className={secondary + " inline-flex"}>Denúncias de mensagens</Link>
       {busy && <p role="status" className="text-sm text-[#123a5a]">Processando solicitação...</p>}
       {error && <p role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</p>}
       {success && <p role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{success}</p>}

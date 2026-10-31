@@ -155,6 +155,7 @@ export default function NotificationsPage() {
                           <p className="mt-2 text-sm text-slate-700">{it.message}</p>
                         </div>
                         <div className="flex min-w-[150px] flex-col gap-2">
+                          {it.fromUserId && <Link href={`/mensagens?to=${encodeURIComponent(it.fromUserId)}`} className="rounded-full border border-[#cfe8ff] bg-white px-3 py-2 text-center text-sm font-semibold">Enviar mensagem</Link>}
                           <button onClick={() => handleOpenResume(it.fromUserId)} className="rounded-full bg-[#123a5a] px-2 py-1.5 text-sm font-medium text-white">Ver currículo</button>
                           <button disabled={busyId === it.id || it.read} onClick={() => handleMarkApplicationRead(it.id)} className="rounded-full bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50">{it.read ? "Lida" : "Marcar lida"}</button>
                           <select
@@ -193,6 +194,7 @@ export default function NotificationsPage() {
                           <p className="mt-2 text-sm text-slate-700">{it.message}</p>
                         </div>
                         <div className="flex flex-col gap-2">
+                          {typeof it.fromCompanyId === "string" && <Link href={`/mensagens?to=${encodeURIComponent(it.fromCompanyId)}`} className="rounded-full border border-[#cfe8ff] bg-white px-3 py-2 text-center text-sm font-semibold">Enviar mensagem</Link>}
                           <button onClick={() => handleRespond(it.id, true)} className="rounded-full bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white">Aceitar</button>
                           <button onClick={() => handleRespond(it.id, false)} className="rounded-full bg-red-100 px-3 py-1.5 text-sm font-semibold text-red-700">Rejeitar</button>
                           <button onClick={() => handleMarkProposalRead(it.id)} className="rounded-full bg-slate-100 px-2 py-1.5 text-sm font-medium text-slate-700">Marcar lida</button>

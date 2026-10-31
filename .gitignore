@@ -43,3 +43,6 @@ next-env.d.ts
 # Firebase Functions generated files
 /functions/node_modules
 /functions/lib
+/.tmp-chat-java/
+firebase-debug.log
+firestore-debug.log

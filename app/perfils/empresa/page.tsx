@@ -132,6 +132,7 @@ export default function PerfilEmpresaPage() {
                   {safeWebsite(profile?.linkedin) && <a href={safeWebsite(profile?.linkedin)} target="_blank" rel="noopener noreferrer" className="text-sm text-[#123a5a] underline">LinkedIn ↗</a>}
                   <Link href="/perfils/empresa/editar" className="rounded-full bg-[#123a5a] px-3 py-1 text-xs font-semibold text-white">Editar perfil</Link>
                   <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Ir para o feed</Link>
+                  <Link href="/mensagens" className="rounded-full border border-[#cfe8ff] bg-[#f7fbff] px-3 py-1 text-xs font-semibold text-[#123a5a]">Mensagens</Link>
                 </div>
               </div>
             </div>

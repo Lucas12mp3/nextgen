@@ -114,6 +114,7 @@ export default function PerfilEstudantePage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                <Link href="/mensagens" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a]">Mensagens</Link>
                 <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:bg-[#f5fbff]">Ir para o feed</Link>
                 <Link href="/perfils/estudante/editar" className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2d46]">Editar perfil</Link>
               </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { auth } from "@/firebase/config";
 import { toggleLike, subscribeComments, addComment, editPost, deletePost, type PostRecord } from "@/services/posts";
 
@@ -121,6 +122,7 @@ export default function PostItem({ post, currentUid, onDeleted, onUpdated }: Pro
           </div>
           <div>
             <p className="font-black text-[#123a5a]">{post.authorName}</p>
+            {currentUid && currentUid !== post.authorId && <Link href={`/mensagens?to=${encodeURIComponent(post.authorId)}`} className="text-xs font-semibold text-[#2577bd] hover:underline">Enviar mensagem</Link>}
             <p className="text-xs text-slate-500">{post.authorType || "Usuário"} • {formatPostDate(post.createdAt)}</p>
           </div>
         </div>

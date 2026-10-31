@@ -17,6 +17,97 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(uid)).data.tipoConta == "empresa"
         && get(/databases/$(database)/documents/users/$(uid)).data.companyStatus == "verified";
     }
+    function chatEligible(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.tipoConta == "estudante" || verifiedCompany(uid);
+    }
+    function chatPair(members) {
+      return members is list && members.size() == 2 && members[0] is string && members[1] is string
+        && members[0] != members[1] && chatEligible(members[0]) && chatEligible(members[1])
+        && (get(/databases/$(database)/documents/users/$(members[0])).data.tipoConta == "estudante"
+          || get(/databases/$(database)/documents/users/$(members[1])).data.tipoConta == "estudante");
+    }
+    match /conversations/{conversationId} {
+      function participant() { return signedIn() && request.auth.uid in resource.data.members; }
+      function ownReadChange() {
+        return request.resource.data.readAt.diff(resource.data.readAt).affectedKeys().hasOnly([request.auth.uid])
+          && request.resource.data.readAt[request.auth.uid] == request.time;
+      }
+      function validSend() {
+        let before = resource.data;
+        let after = request.resource.data;
+        let message = getAfter(/databases/$(database)/documents/conversations/$(conversationId)/messages/$(after.lastMessageId)).data;
+        return before.status == "accepted" && before.blockedBy.size() == 0 && chatPair(before.members)
+          && after.diff(before).affectedKeys().hasOnly(["lastMessageId", "lastMessage", "lastSenderId", "updatedAt", "readAt"])
+          && !exists(/databases/$(database)/documents/conversations/$(conversationId)/messages/$(after.lastMessageId))
+          && message.senderId == request.auth.uid && message.createdAt == request.time
+          && after.lastMessage == message.text && after.lastSenderId == request.auth.uid
+          && after.updatedAt == request.time && ownReadChange();
+      }
+      allow get: if signedIn() && (!exists(/databases/$(database)/documents/conversations/$(conversationId)) || participant());
+      allow list: if participant();
+      allow create: if signedIn() && chatPair(request.resource.data.members)
+        && request.resource.data.members[0].matches("[^|/]{1,128}") && request.resource.data.members[1].matches("[^|/]{1,128}")
+        && !existsAfter(/databases/$(database)/documents/conversations/$(request.resource.data.members[1] + "|" + request.resource.data.members[0]))
+        && request.auth.uid in request.resource.data.members
+        && conversationId == request.resource.data.members[0] + "|" + request.resource.data.members[1]
+        && request.resource.data.keys().hasOnly(["members", "createdBy", "status", "intro", "blockedBy", "readAt", "createdAt", "updatedAt", "lastMessageId", "lastMessage", "lastSenderId"])
+        && request.resource.data.createdBy == request.auth.uid && request.resource.data.status == "pending"
+        && request.resource.data.intro is string && request.resource.data.intro.size() > 0 && request.resource.data.intro.size() <= 500
+        && request.resource.data.blockedBy == [] && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time && request.resource.data.lastSenderId == request.auth.uid
+        && request.resource.data.lastMessage == request.resource.data.intro && request.resource.data.lastMessageId == ""
+        && request.resource.data.readAt.keys().hasAll(request.resource.data.members)
+        && request.resource.data.readAt.keys().hasOnly(request.resource.data.members)
+        && request.resource.data.readAt[request.auth.uid] == request.time
+        && (request.resource.data.readAt[request.resource.data.members[0]] == null || request.resource.data.readAt[request.resource.data.members[1]] == null);
+      allow update: if participant() && (
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["readAt"]) && ownReadChange())
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status"])
+          && resource.data.status == "pending" && request.auth.uid != resource.data.createdBy
+          && resource.data.blockedBy.size() == 0 && chatPair(resource.data.members)
+          && request.resource.data.status in ["accepted", "declined"])
+        || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(["blockedBy"])
+          && request.resource.data.blockedBy is list
+          && request.resource.data.blockedBy.toSet().size() == request.resource.data.blockedBy.size()
+          && request.resource.data.blockedBy.hasOnly(resource.data.members)
+          && request.resource.data.blockedBy.removeAll([request.auth.uid]) == resource.data.blockedBy.removeAll([request.auth.uid]))
+        || validSend());
+      allow delete: if false;
+      match /messages/{messageId} {
+        function parent() { return get(/databases/$(database)/documents/conversations/$(conversationId)).data; }
+        allow read: if signedIn() && request.auth.uid in parent().members;
+        allow create: if signedIn() && request.auth.uid in parent().members && parent().status == "accepted"
+          && parent().blockedBy.size() == 0 && chatPair(parent().members)
+          && request.resource.data.keys().hasOnly(["senderId", "text", "createdAt"])
+          && request.resource.data.senderId == request.auth.uid && request.resource.data.createdAt == request.time
+          && request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 2000
+          && getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.lastMessageId == messageId
+          && getAfter(/databases/$(database)/documents/conversations/$(conversationId)).data.updatedAt == request.time;
+        allow update, delete: if false;
+      }
+    }
+    match /chatReports/{reportId} {
+      function validReport() {
+        let data = request.resource.data;
+        let chat = get(/databases/$(database)/documents/conversations/$(data.conversationId)).data;
+        return data.keys().hasOnly(["conversationId", "reporterId", "reportedId", "reason", "createdAt", "status", "messageId", "evidence"])
+          && data.reporterId == request.auth.uid && request.auth.uid in chat.members
+          && data.reportedId in chat.members && data.reportedId != request.auth.uid
+          && reportId == data.conversationId + "_" + request.auth.uid
+          && data.reason is string && data.reason.size() >= 10 && data.reason.size() <= 1000
+          && data.createdAt == request.time && data.status == "open"
+          && ((data.messageId == "" && data.evidence == "")
+            || (get(/databases/$(database)/documents/conversations/$(data.conversationId)/messages/$(data.messageId)).data.senderId == data.reportedId
+              && get(/databases/$(database)/documents/conversations/$(data.conversationId)/messages/$(data.messageId)).data.text == data.evidence));
+      }
+      allow get: if signedIn() && (!exists(/databases/$(database)/documents/chatReports/$(reportId)) || resource.data.reporterId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if signedIn() && validReport();
+      allow update: if isAdmin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["status", "reviewedAt", "reviewedBy"])
+        && request.resource.data.status in ["reviewed", "resolved"] && request.resource.data.reviewedAt == request.time
+        && request.resource.data.reviewedBy == request.auth.uid;
+      allow delete: if false;
+    }
 
     // These documents are directory-safe only after the one-time migration removes email/resumeUrl.
     match /users/{userId} {

@@ -8,6 +8,7 @@ import { doc, getDoc } from "firebase/firestore";
 import NotificationsButton from "@/components/proposals/NotificationsButton";
 import BrandLogo from "@/components/BrandLogo";
 import { getAdminSession } from "@/services/admin";
+import MessagesButton from "@/components/chat/MessagesButton";
 
 export default function Header() {
   const [user, setUser] = useState<User | null>(null);
@@ -80,7 +81,7 @@ export default function Header() {
 
       <div className="flex items-center justify-end gap-3">
         <button type="button" aria-expanded={mobileOpen} aria-controls="mobile-navigation" onClick={() => setMobileOpen(!mobileOpen)} className="rounded-full border border-[#cfe8ff] bg-white px-3 py-2 text-sm font-semibold md:hidden">{mobileOpen ? "Fechar" : "Menu"}</button>
-        {user && <NotificationsButton />}
+        {user && <><MessagesButton key={user.uid} userId={user.uid} /><NotificationsButton /></>}
 
         {user ? (
           <div ref={menuRef} className="relative">
@@ -111,6 +112,7 @@ export default function Header() {
                 </div>
 
                 <div className="space-y-1 p-2">
+                  <Link href="/mensagens" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm text-sky-200 hover:bg-[#1d2733]">Mensagens</Link>
                   {isAdmin && <Link href="/admin" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-semibold text-sky-200 hover:bg-[#1d2733]">Administração</Link>}
                   <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
                     <span>{profileType === "empresa" ? "Painel da empresa" : "Meu perfil"}</span>
