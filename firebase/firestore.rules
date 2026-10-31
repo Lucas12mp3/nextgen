@@ -329,7 +329,7 @@ service cloud.firestore {
     }
 
     match /desafios/{id} {
-      allow read: if signedIn(); // question docs must not contain answer keys
+      allow read: if signedIn() && (resource.data.get("scoringVersion", 0) == 2 || isAdmin());
       allow create, delete: if false; // created/deleted only by trusted Functions/admin workflows
       allow update: if signedIn() && resource.data.empresaId == request.auth.uid
         && verifiedCompany(request.auth.uid)
@@ -337,7 +337,7 @@ service cloud.firestore {
         && request.resource.data.status in ["aberto", "fechado"];
     }
     match /conquistas/{id} {
-      allow read: if signedIn();
+      allow read: if signedIn() && (resource.data.get("scoringVersion", 0) == 2 || isAdmin());
       allow create, update, delete: if false; // score and points are server-generated
     }
   }

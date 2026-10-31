@@ -8,6 +8,7 @@ import ts from "typescript";
 import { getApps, deleteApp } from "firebase-admin/app";
 import { initializeTestEnvironment, assertFails } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import * as clientSDK from "firebase/firestore";
 
 process.env.NODE_ENV = "test";
 process.env.FIREBASE_PROJECT_ID = "demo-nextgen-chat";
@@ -27,6 +28,20 @@ function load(path) {
   return exports;
 }
 const routes = () => ({ create: load("app/api/desafios/route.ts"), submit: load("app/api/desafios/tentativa/route.ts"), close: load("app/api/desafios/fechar/route.ts") });
+function client(actor) {
+  const exports = {};
+  const code = ts.transpileModule(readFileSync("services/desafios.ts", "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  vm.runInThisContext(`(function(exports, require, fetch) { ${code} })`)(exports, name => {
+    if (name === "firebase/firestore") return clientSDK;
+    if (name === "@/firebase/config") return { auth: { currentUser: { uid: actor.uid, getIdToken: async () => actor.token } }, db: env.authenticatedContext(actor.uid).firestore() };
+    if (name === "@/lib/challenge-policy") return load("lib/challenge-policy.ts");
+    throw new Error(`Unexpected client import ${name}`);
+  }, async (path, options) => {
+    const route = path.endsWith("/tentativa") ? routes().submit : path.endsWith("/fechar") ? routes().close : routes().create;
+    return route.POST(new Request("http://localhost:3000" + path, options));
+  });
+  return exports;
+}
 let env, admin, company, student, other, pending;
 async function user(email) {
   const response = await fetch("http://127.0.0.1:9098/identitytoolkit.googleapis.com/v1/accounts:signUp?key=demo-key", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ email, password: "test-only-password", returnSecureToken: true }) });
@@ -127,4 +142,26 @@ test("aprovação revogada, conta desativada e desafios antigos são protegidos"
   await admin.auth.updateUser(student.uid, { disabled: true });
   try { assert.equal((await post(routes().submit, student, { desafioId: id, respostas: [1, 1] })).status, 401); }
   finally { await admin.auth.updateUser(student.uid, { disabled: false }); }
+});
+test("serviços do navegador publicam, listam, respondem, recuperam e fecham via API", async () => {
+  const companyClient = client(company), studentClient = client(student);
+  const id = await companyClient.criarDesafio({ ...payload(), empresaId: company.uid });
+  assert.equal((await studentClient.getDesafio(id)).titulo, "Lógica para iniciantes");
+  assert.equal(await studentClient.getResultado(id), null);
+  const listed = await new Promise((resolve, reject) => {
+    const stop = studentClient.subscribeDesafiosAbertos(items => { stop(); resolve(items); }, reject);
+  });
+  assert.equal(listed.length, 1);
+  const result = await studentClient.enviarTentativa(id, [1, 1]);
+  assert.equal(result.nota, 100);
+  assert.equal((await studentClient.getResultado(id)).nota, 100);
+  await companyClient.fecharDesafio(id);
+  assert.equal((await studentClient.getDesafio(id)).status, "fechado");
+});
+test("dados antigos sem correção verificada não são expostos ao navegador", async () => {
+  await admin.db.doc("desafios/legacy").set({ titulo: "Antigo", perguntas: [{ correta: 0 }], status: "aberto" });
+  await admin.db.doc("conquistas/legacy").set({ userId: student.uid, nota: 100, pontos: 90000 });
+  const store = env.authenticatedContext(student.uid).firestore();
+  await assertFails(getDoc(doc(store, "desafios", "legacy")));
+  await assertFails(getDoc(doc(store, "conquistas", "legacy")));
 });
