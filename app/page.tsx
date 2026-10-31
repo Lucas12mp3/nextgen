@@ -10,10 +10,10 @@ import { subscribeVagas, type Vaga } from "@/services/vagas";
 
 const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
-const stats = [
-  { value: "+8k", label: "jovens conectados" },
-  { value: "300+", label: "empresas ativas" },
-  { value: "92%", label: "satisfação dos usuários" },
+const highlights = [
+  { value: "Aprenda", label: "mostre suas habilidades" },
+  { value: "Candidate-se", label: "descubra oportunidades" },
+  { value: "Converse", label: "conecte-se com a comunidade" },
 ];
 
 const benefits = [
@@ -97,10 +97,10 @@ export default function Home() {
 
           <div className="mt-8 flex flex-col gap-4 sm:flex-row">
             <Link
-              href="/cadastro"
+              href={user ? profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante" : "/cadastro"}
               className="rounded-full bg-[#123a5a] px-6 py-3 text-center text-base font-semibold text-white shadow-xl shadow-blue-200 transition hover:bg-[#0f2f4d]"
             >
-              Quero começar
+              {user ? "Ir para meu perfil" : "Quero começar"}
             </Link>
             <Link
               href={user ? "/vagas" : "/login"}
@@ -111,13 +111,12 @@ export default function Home() {
           </div>
 
           <div className="mt-10 flex flex-wrap gap-8 text-sm text-slate-600">
-            {stats.map((item) => (
+            {highlights.map((item) => (
               <div key={item.label}>
                 <p className="text-2xl font-black text-[#123a5a]">{item.value}</p>
                 <p>{item.label}</p>
               </div>
             ))}
-            <p className="mt-2 w-full text-xs font-semibold text-yellow-800">Dados de exemplo — não reais</p>
           </div>
         </div>
 
