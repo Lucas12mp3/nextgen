@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
-import { useChallengeAvailability } from "@/components/desafios/useChallengeAvailability";
+import { availabilityMessage, useChallengeStatus } from "@/components/desafios/useChallengeAvailability";
 import { enviarTentativa, getDesafio, getResultado, type AttemptResult, type Desafio } from "@/services/desafios";
 
 export default function ChallengePage() {
@@ -19,7 +19,7 @@ export default function ChallengePage() {
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const [error, setError] = useState("");
-  const available = useChallengeAvailability();
+  const { available, reason, retry } = useChallengeStatus();
   useEffect(() => {
     let active = true, version = 0;
     const stop = onAuthStateChanged(auth, async current => {
@@ -59,7 +59,7 @@ export default function ChallengePage() {
       {challenge && <><h1 className="mt-5 text-3xl font-black text-[#123a5a]">{challenge.titulo}</h1><p className="mt-2 text-sm text-slate-500">{challenge.empresaNome} · {challenge.area} · {challenge.nivel}</p><p className="mt-5 whitespace-pre-wrap text-sm leading-7 text-slate-600">{challenge.descricao}</p><div className="mt-5 grid grid-cols-2 gap-3 rounded-2xl bg-[#f6fbff] p-4 text-sm"><p>Nota mínima: <strong>{challenge.notaMinima}%</strong></p><p>Até <strong>{challenge.pontos} pontos</strong></p></div>
         {result ? <section role="status" className={`mt-6 rounded-2xl border p-5 ${result.aprovado ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}><p className="text-xs font-bold uppercase tracking-widest">{result.duplicated ? "Resultado já registrado" : "Resultado da sua participação"}</p><h2 className="mt-3 text-2xl font-black">Nota: {result.nota}%</h2><p className="mt-3 text-sm">Você acertou {result.acertos} de {challenge.perguntas.length} perguntas.</p><p className="mt-2 text-sm">{result.aprovado ? `Conquista recebida! Você ganhou ${result.pontos} pontos.` : "Você não atingiu a nota mínima desta vez. Sua participação foi registrada e você pode explorar outros desafios."}</p><div className="mt-5 flex flex-wrap gap-4"><Link href="/ranking" className="text-sm font-semibold underline">Ver ranking</Link><Link href="/desafios" className="text-sm font-semibold underline">Explorar outros desafios</Link></div></section>
         : challenge.status !== "aberto" ? <p className="my-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Este desafio foi fechado pela empresa e não recebe novas respostas.</p>
-        : available === false ? <p className="my-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">A correção está temporariamente indisponível. Tente novamente mais tarde.</p>
+        : available === false ? <div role="status" className="my-6 rounded-xl bg-amber-50 p-4 text-sm text-amber-800"><p>{availabilityMessage(reason)}</p><button type="button" onClick={retry} className="mt-3 font-semibold underline">Verificar novamente</button></div>
         : <form onSubmit={submit} className="mt-6 space-y-5"><p className="rounded-xl bg-[#edf6ff] p-4 text-sm leading-6">Você tem uma tentativa válida. Confira todas as respostas antes de enviar. Se a conexão falhar, repetir o envio recupera o resultado registrado.</p><div className="flex justify-between text-xs font-semibold"><span>Seu progresso</span><span>{answered}/{challenge.perguntas.length} respondidas</span></div><progress aria-label="Perguntas respondidas" value={answered} max={challenge.perguntas.length} className="h-2 w-full accent-[#123a5a]" />{challenge.perguntas.map((question, index) => <fieldset key={index} disabled={busy} className="space-y-2 rounded-2xl border border-[#dfeeff] bg-[#f9fcff] p-4"><legend className="px-2 text-sm font-bold">Pergunta {index + 1}</legend><p className="mb-3 whitespace-pre-wrap text-sm font-semibold">{question.enunciado}</p>{question.opcoes.map((option, optionIndex) => <label key={optionIndex} className="flex cursor-pointer items-start gap-3 rounded-xl border border-[#dfeeff] bg-white p-3 text-sm leading-6"><input type="radio" required name={`question-${index}`} checked={answers[index] === optionIndex} onChange={() => setAnswers(previous => ({ ...previous, [index]: optionIndex }))} className="mt-1 h-4 w-4 shrink-0 accent-[#123a5a]" /><span className="break-words">{option}</span></label>)}</fieldset>)}<div className="text-right"><button type="submit" disabled={busy || !canSubmit || answered !== challenge.perguntas.length} className="rounded-full bg-[#123a5a] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50">{busy ? "Corrigindo..." : "Enviar respostas definitivas"}</button></div></form>}
       </>}
     </>}

@@ -5,7 +5,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import DesafioForm from "@/components/desafios/DesafioForm";
-import { useChallengeAvailability } from "@/components/desafios/useChallengeAvailability";
+import { availabilityMessage, useChallengeStatus } from "@/components/desafios/useChallengeAvailability";
 import { fecharDesafio, subscribeConquistas, subscribeDesafiosAbertos, subscribeDesafiosEmpresa, type Conquista, type Desafio } from "@/services/desafios";
 
 const card = "rounded-3xl border border-[#dfeeff] bg-white p-5 shadow-sm";
@@ -18,7 +18,7 @@ export default function DesafiosPage() {
   const [error, setError] = useState("");
   const [closing, setClosing] = useState("");
   const closingLock = useRef(false);
-  const available = useChallengeAvailability();
+  const { available, reason, retry } = useChallengeStatus();
   useEffect(() => {
     let stopProfile: (() => void) | undefined;
     const stopAuth = onAuthStateChanged(auth, current => {
@@ -49,7 +49,7 @@ export default function DesafiosPage() {
   return <main className="min-h-screen bg-[#edf6ff] p-4 text-slate-800 sm:p-8"><div className="mx-auto max-w-6xl space-y-5">
     <header className={`${card} flex flex-wrap items-center justify-between gap-4`}><div><p className="text-xs font-bold uppercase tracking-widest text-slate-500">Aprenda e mostre seu potencial</p><h1 className="mt-2 text-3xl font-black text-[#123a5a]">Desafios</h1></div><div className="flex gap-3"><Link href="/" className="rounded-full border border-[#cfe8ff] px-4 py-2 text-sm font-semibold">← Início</Link><Link href="/ranking" className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white">Ver ranking</Link></div></header>
     {error && <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
-    {available === false && <p role="status" className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">A publicação e a correção de desafios estão temporariamente indisponíveis. Seu histórico permanece disponível.</p>}
+    {available === false && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800"><p>{availabilityMessage(reason)}</p><button type="button" onClick={retry} className="rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-semibold">Verificar novamente</button></div>}
     {loading ? <p role="status" className={card}>Carregando desafios...</p> : !user ? <div className={card}><h2 className="text-xl font-bold">Desafios para seu próximo passo</h2><p className="my-4 text-sm text-slate-500">Entre para participar e acompanhar suas conquistas.</p><Link href="/login" className="font-semibold underline">Entrar na conta</Link></div> : !profile ? <p className={card}>Seu perfil não foi encontrado. Procure a administração.</p> : <div className={`grid items-start gap-5 ${company ? "lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]" : "lg:grid-cols-[minmax(0,1fr)_300px]"}`}>
       {company && <section className={card}><h2 className="text-xl font-black">Criar desafio</h2>{!profile.approved && <p className="mt-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-800">Sua empresa precisa de aprovação administrativa para publicar desafios.</p>}<DesafioForm companyId={user.uid} enabled={profile.approved && available === true} /></section>}
       <section className={card}><h2 className="text-xl font-black">{company ? "Desafios publicados" : "Escolha seu próximo desafio"}</h2><p className="mt-2 text-sm leading-6 text-slate-500">{company ? "Ao fechar um desafio, novas participações são interrompidas e os resultados anteriores são preservados." : "Cada desafio permite uma tentativa válida. Confira todas as respostas antes de enviar."}</p><div className="mt-5 space-y-3">
