@@ -209,6 +209,10 @@ service cloud.firestore {
       allow delete: if false;
     }
     match /desafioSegredos/{challengeId} { allow read, write: if false; }
+    match /desafioTentativas/{attemptId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
+    }
     match /resumes/{studentUid} {
       allow get: if signedIn() && (request.auth.uid == studentUid || (verifiedCompany(request.auth.uid)
         && exists(/databases/$(database)/documents/resumeAccess/$(studentUid)/companies/$(request.auth.uid))));

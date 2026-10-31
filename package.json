@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test:challenges": "firebase emulators:exec --only auth,firestore --project demo-nextgen-chat --config firebase.chat-test.json \"node --test --test-concurrency=1 tests/challenge-api.test.mjs tests/core-rules.test.mjs tests/chat-rules.test.mjs\"",
     "test:chat:unit": "node --test tests/chat-policy.test.cjs",
     "test:core:unit": "node --test tests/registration-policy.test.cjs tests/applications.test.cjs",
     "test:core": "firebase emulators:exec --only firestore --project demo-nextgen-chat --config firebase.chat-test.json \"node --test --test-concurrency=1 tests/core-rules.test.mjs tests/chat-rules.test.mjs\"",
@@ -15,9 +16,11 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "firebase": "^12.17.1",
+    "firebase-admin": "^13.10.0",
     "next": "16.3.1",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^5.0.2",
