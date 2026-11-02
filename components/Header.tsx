@@ -113,6 +113,7 @@ export default function Header() {
 
                 <div className="space-y-1 p-2">
                   <Link href="/mensagens" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm text-sky-200 hover:bg-[#1d2733]">Mensagens</Link>
+                  <Link href="/mensagens?view=friends" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm text-sky-200 hover:bg-[#1d2733]">Amigos</Link>
                   {isAdmin && <Link href="/admin" onClick={() => setMenuOpen(false)} className="block rounded-xl px-3 py-2 text-sm font-semibold text-sky-200 hover:bg-[#1d2733]">Administração</Link>}
                   <Link href={profileType === "empresa" ? "/perfils/empresa" : "/perfils/estudante"} onClick={() => setMenuOpen(false)} className="flex items-center justify-between rounded-xl px-3 py-2 text-sm text-slate-200 transition hover:bg-[#1d2733]">
                     <span>{profileType === "empresa" ? "Painel da empresa" : "Meu perfil"}</span>

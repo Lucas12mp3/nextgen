@@ -3,8 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
   answerConversation, canContact, canSend, isUnread, markChatRead, olderMessages, reportConversation,
-  sendChatMessage, setChatBlocked, subscribeMessages, type ChatMessage, type ChatProfile, type Conversation, type MessageCursor,
+  sendChatMessage, setChatBlocked, subscribeMessages, type ChatMessage, type ChatProfile, type Conversation, type MessageCursor, type Friendship,
 } from "@/services/chat";
+import FriendshipControls from "./FriendshipControls";
+import { ActivityBadge, useContactStatus } from "./PresenceBadge";
+import { useChatActivity } from "./ChatActivityProvider";
 
 const primary = "rounded-full bg-[#123a5a] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50";
 const secondary = "rounded-full border border-[#cfe8ff] bg-white px-3 py-2 text-xs font-semibold text-[#123a5a] disabled:opacity-50";
@@ -14,11 +17,13 @@ function mergeMessages(a: ChatMessage[], b: ChatMessage[]) {
     (x.createdAt?.toMillis() ?? Date.now()) - (y.createdAt?.toMillis() ?? Date.now()) || x.id.localeCompare(y.id));
 }
 
-export default function ConversationView({ chat, userId, other, self, onBack }: {
-  chat: Conversation; userId: string; other: ChatProfile | null; self: ChatProfile | null; onBack: () => void;
+export default function ConversationView({ chat, userId, other, self, onBack, friendship, friendsLoading }: {
+  chat: Conversation; userId: string; other: ChatProfile | null; self: ChatProfile | null; onBack: () => void; friendship?: Friendship; friendsLoading: boolean;
 }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [confirmed, setConfirmed] = useState(false);
+  const [readCycle, setReadCycle] = useState(0);
   const [more, setMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const cursor = useRef<MessageCursor | null>(null);
@@ -35,14 +40,21 @@ export default function ConversationView({ chat, userId, other, self, onBack }: 
   const [atBottom, setAtBottom] = useState(true);
   const retry = useRef<{ text: string; id: string } | null>(null);
   const reading = useRef(false);
+  const completedRead = useRef("");
+  const mounted = useRef(false);
   const ownBlock = chat.blockedBy.includes(userId);
+  const activity = useChatActivity();
+  const otherStatus = useContactStatus(other?.uid, chat.status === "accepted" && chat.blockedBy.length === 0);
   const canWrite = canSend(chat, userId) && !!self && !!other && canContact(self, other);
   const lastIncoming = [...messages].reverse().find(message => message.senderId !== userId);
 
-  useEffect(() => subscribeMessages(chat.id, 50, (items, oldest, hasMore) => {
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+
+  useEffect(() => subscribeMessages(chat.id, 50, (items, oldest, hasMore, synced) => {
     setMessages(previous => mergeMessages(previous, items));
     if (!cursor.current) { cursor.current = oldest; setMore(hasMore); }
     setLoading(false);
+    setConfirmed(synced);
   }, () => { setLoading(false); setError("Não foi possível carregar as mensagens. Atualize a página para tentar novamente."); }), [chat.id]);
 
   const lastId = messages.at(-1)?.id;
@@ -51,17 +63,27 @@ export default function ConversationView({ chat, userId, other, self, onBack }: 
   }, [lastId]);
 
   useEffect(() => {
-    let active = true;
     function read() {
-      if (atBottom && !document.hidden && document.hasFocus() && isUnread(chat, userId) && !reading.current) {
+      const needsReceipt = activity.ready && activity.status.readReceipts && chat.status === "accepted" && chat.blockedBy.length === 0
+        && chat.lastSenderId !== userId && (chat.updatedAt?.toMillis() ?? 0) > (chat.readAt[userId]?.toMillis() ?? 0);
+      const renderedLatest = !chat.lastMessageId || lastId === chat.lastMessageId;
+      const readKey = `${chat.lastMessageId}:${chat.updatedAt?.toMillis()}:${activity.status.readReceipts}`;
+      if (activity.ready && confirmed && !loading && renderedLatest && atBottom && !document.hidden && document.hasFocus() && (isUnread(chat, userId) || needsReceipt) && !reading.current && completedRead.current !== readKey) {
         reading.current = true;
-        void markChatRead(chat.id).catch(() => { if (active) setError("Não foi possível confirmar a leitura. Suas mensagens continuam disponíveis."); }).finally(() => { reading.current = false; });
+        void markChatRead(chat.id, chat.lastMessageId).then(() => {
+          reading.current = false;
+          completedRead.current = readKey;
+          if (mounted.current) setReadCycle(cycle => cycle + 1);
+        }).catch(() => {
+          reading.current = false;
+          if (mounted.current) setError("Não foi possível confirmar a leitura. Suas mensagens continuam disponíveis.");
+        });
       }
     }
     read();
     document.addEventListener("visibilitychange", read); window.addEventListener("focus", read);
-    return () => { active = false; document.removeEventListener("visibilitychange", read); window.removeEventListener("focus", read); };
-  }, [chat, userId, atBottom]);
+    return () => { document.removeEventListener("visibilitychange", read); window.removeEventListener("focus", read); };
+  }, [chat, userId, atBottom, loading, confirmed, lastId, activity.ready, activity.status.readReceipts, readCycle]);
 
   async function action(task: () => Promise<unknown>, success = "") {
     if (busyRef.current) return;
@@ -101,7 +123,7 @@ export default function ConversationView({ chat, userId, other, self, onBack }: 
   return <div className="flex h-[max(600px,75dvh)] max-h-[850px] flex-col">
     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#edf3ff] p-4">
       <div className="flex min-w-0 items-center gap-3"><button type="button" onClick={onBack} aria-label="Voltar às conversas" className={`${secondary} md:hidden`}>←</button><span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#edf6ff] font-black text-[#123a5a]">{(other?.nome || "C").slice(0, 1).toUpperCase()}</span><div className="min-w-0"><h2 className="break-words text-sm font-bold text-[#123a5a]">{other?.nome || "Carregando contato..."}</h2><p className="text-xs text-slate-500">{other?.tipoConta === "empresa" ? "Empresa" : "Estudante"} · {chat.status === "pending" ? "Solicitação de conversa" : chat.status === "declined" ? "Solicitação recusada" : "Conversa privada"}</p></div></div>
-      <div className="flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={() => void action(() => setChatBlocked(chat.id, !ownBlock), ownBlock ? "Contato desbloqueado." : "Contato bloqueado. Nenhuma nova mensagem pode ser enviada.")} className={secondary}>{ownBlock ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => setReportOpen(!reportOpen)} aria-expanded={reportOpen} aria-controls="report-chat" className={secondary}>Denunciar</button></div>
+      <div className="flex flex-wrap items-center gap-2"><ActivityBadge status={otherStatus} />{other && <FriendshipControls userId={userId} otherId={other.uid} friendship={friendship} disabled={friendsLoading || !self || !canContact(self, other) || chat.blockedBy.length > 0} />}<button type="button" disabled={busy} onClick={() => void action(() => setChatBlocked(chat.id, !ownBlock), ownBlock ? "Contato desbloqueado." : "Contato bloqueado. Nenhuma nova mensagem pode ser enviada.")} className={secondary}>{ownBlock ? "Desbloquear" : "Bloquear"}</button><button type="button" onClick={() => setReportOpen(!reportOpen)} aria-expanded={reportOpen} aria-controls="report-chat" className={secondary}>Denunciar</button></div>
     </header>
     {error && <p role="alert" className="mx-4 mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">{error}</p>}
     {notice && <p role="status" className="mx-4 mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">{notice}</p>}
@@ -113,7 +135,7 @@ export default function ConversationView({ chat, userId, other, self, onBack }: 
       <ol className="space-y-3">{messages.map(message => {
         const mine = message.senderId === userId;
         const read = mine && !!other && (chat.readAt[other.uid]?.toMillis() ?? 0) >= (message.createdAt?.toMillis() ?? Infinity);
-        return <li key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[88%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${mine ? "rounded-br-sm bg-[#123a5a] text-white" : "rounded-bl-sm border border-[#dfeeff] bg-white text-slate-800"}`}><p className="sr-only">{mine ? "Você" : other?.nome || "Contato"}</p><p className="whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]">{message.text}</p><p className={`mt-2 text-right text-[10px] ${mine ? "text-sky-100" : "text-slate-400"}`}>{time(message.createdAt)}{mine ? read ? " · Lida" : " · Enviada" : ""}</p></div></li>;
+        return <li key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}><div className={`max-w-[88%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${mine ? "rounded-br-sm bg-[#123a5a] text-white" : "rounded-bl-sm border border-[#dfeeff] bg-white text-slate-800"}`}><p className="sr-only">{mine ? "Você" : other?.nome || "Contato"}</p><p className="whitespace-pre-wrap break-words text-sm leading-6 [overflow-wrap:anywhere]">{message.text}</p><p className={`mt-2 text-right text-[11px] ${mine ? "text-sky-100" : "text-slate-400"}`}>{time(message.createdAt)}{mine && message.createdAt && <span className={`ml-2 inline-flex items-center gap-1 font-semibold ${read ? "text-cyan-200" : "text-sky-100"}`}><span aria-hidden="true">{read ? "✓✓" : "✓"}</span>{read ? "Visto" : "Enviada"}</span>}</p></div></li>;
       })}</ol>
       {chat.status === "accepted" && !messages.length && !loading && <p className="text-center text-sm text-slate-500">Solicitação aceita. Vocês já podem conversar!</p>}
     </div>

@@ -3,6 +3,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import Header from "@/components/Header";
 import PageMotion from "@/components/PageMotion";
+import ChatActivityProvider from "@/components/chat/ChatActivityProvider";
 
 export const metadata: Metadata = {
   title: "NextGen | Conectando jovens ao futuro",
@@ -21,10 +22,12 @@ export default function RootLayout({
       className="h-full antialiased"
     >
       <body className="min-h-full flex flex-col">
+        <ChatActivityProvider>
         <Header />
         <PageMotion />
         {children}
         <Analytics />
+        </ChatActivityProvider>
       </body>
     </html>
   );
