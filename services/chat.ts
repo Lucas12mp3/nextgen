@@ -1,7 +1,7 @@
 import {
   collection, doc, documentId, getDoc, getDocs, limit, onSnapshot, orderBy, query,
   runTransaction, serverTimestamp, startAfter, updateDoc, where, arrayUnion, arrayRemove,
-  FieldPath, type QueryDocumentSnapshot, type DocumentData,
+  type QueryDocumentSnapshot, type DocumentData,
 } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { canContact, canSend, chatText, conversationId, type ChatProfile, type Conversation, type ChatMessage } from "./chat-policy";
@@ -28,10 +28,16 @@ export async function findPeople(cursor: string | null = null) {
   return { items, nextCursor: snap.size > 30 ? items[29].uid : null };
 }
 export function subscribeConversations(userId: string, onUpdate: (chats: Conversation[]) => void, onError: (error: Error) => void) {
-  return onSnapshot(query(collection(db, "conversations"), where("members", "array-contains", userId)), snap => {
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as Conversation));
-    onUpdate(items.sort((a, b) => (b.updatedAt?.toMillis() ?? 0) - (a.updatedAt?.toMillis() ?? 0)));
+  let chats: Conversation[] = [], reads: Record<string, Conversation["updatedAt"]> = {};
+  const emit = () => onUpdate(chats.map(chat => ({ ...chat, privateReadAt: reads[chat.id] }))
+    .sort((a, b) => (b.updatedAt?.toMillis() ?? 0) - (a.updatedAt?.toMillis() ?? 0)));
+  const stopChats = onSnapshot(query(collection(db, "conversations"), where("members", "array-contains", userId)), snap => {
+    chats = snap.docs.map(d => ({ id: d.id, ...d.data() } as Conversation)); emit();
   }, onError);
+  const stopReads = onSnapshot(collection(db, "chatInbox", userId, "conversations"), snap => {
+    reads = Object.fromEntries(snap.docs.map(d => [d.id, d.get("readAt")])); emit();
+  }, onError);
+  return () => { stopChats(); stopReads(); };
 }
 export async function requestConversation(otherUid: string, introduction: string) {
   const current = uid(), id = conversationId(current, otherUid);
@@ -56,9 +62,18 @@ export async function setChatBlocked(id: string, blocked: boolean) {
   const current = uid();
   await updateDoc(doc(db, "conversations", safeId(id)), { blockedBy: blocked ? arrayUnion(current) : arrayRemove(current) });
 }
-export async function markChatRead(id: string) {
+export async function markChatRead(id: string, observedMessageId?: string) {
   const current = uid();
-  await updateDoc(doc(db, "conversations", safeId(id)), new FieldPath("readAt", current), serverTimestamp());
+  const ref = doc(db, "conversations", safeId(id));
+  await runTransaction(db, async tx => {
+    const [chat, settings] = await Promise.all([tx.get(ref), tx.get(doc(db, "chatStatus", current))]);
+    if (!chat.exists() || !chat.get("members").includes(current)) throw new Error("Conversa indisponível.");
+    if (observedMessageId !== undefined && chat.get("lastMessageId") !== observedMessageId) return;
+    tx.set(doc(db, "chatInbox", current, "conversations", id), { readAt: serverTimestamp() });
+    if (settings.get("readReceipts") !== false && chat.get("status") === "accepted" && chat.get("blockedBy").length === 0) {
+      tx.update(ref, { readAt: { ...chat.get("readAt"), [current]: serverTimestamp() } });
+    }
+  });
 }
 export async function sendChatMessage(id: string, value: string, messageId: string) {
   const current = uid(), text = chatText(value);
@@ -72,7 +87,7 @@ export async function sendChatMessage(id: string, value: string, messageId: stri
     }
     if (!chat.exists() || !canSend({ id: chat.id, ...chat.data() } as Conversation, current)) throw new Error("Esta conversa não está disponível para enviar mensagens.");
     tx.set(message, { senderId: current, text, createdAt: serverTimestamp() });
-    tx.update(ref, { lastMessageId: message.id, lastMessage: text, lastSenderId: current, updatedAt: serverTimestamp(), readAt: { ...chat.get("readAt"), [current]: serverTimestamp() } });
+    tx.update(ref, { lastMessageId: message.id, lastMessage: text, lastSenderId: current, updatedAt: serverTimestamp() });
   });
 }
 export type MessageCursor = QueryDocumentSnapshot<DocumentData>;
@@ -80,9 +95,9 @@ export async function olderMessages(id: string, cursor: MessageCursor) {
   const snap = await getDocs(query(collection(db, "conversations", safeId(id), "messages"), orderBy("createdAt", "desc"), orderBy(documentId(), "desc"), startAfter(cursor), limit(50)));
   return { items: snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)), cursor: snap.docs.at(-1) ?? null, more: snap.size === 50 };
 }
-export function subscribeMessages(id: string, count: number, onUpdate: (items: ChatMessage[], oldest: MessageCursor | null, more: boolean) => void, onError: (error: Error) => void) {
-  return onSnapshot(query(collection(db, "conversations", safeId(id), "messages"), orderBy("createdAt", "desc"), orderBy(documentId(), "desc"), limit(count)), snap => {
-    onUpdate(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse(), snap.docs.at(-1) ?? null, snap.size === count);
+export function subscribeMessages(id: string, count: number, onUpdate: (items: ChatMessage[], oldest: MessageCursor | null, more: boolean, confirmed: boolean) => void, onError: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "conversations", safeId(id), "messages"), orderBy("createdAt", "desc"), orderBy(documentId(), "desc"), limit(count)), { includeMetadataChanges: true }, snap => {
+    onUpdate(snap.docs.map(d => ({ id: d.id, ...d.data() } as ChatMessage)).reverse(), snap.docs.at(-1) ?? null, snap.size === count, !snap.metadata.fromCache && !snap.metadata.hasPendingWrites);
   }, onError);
 }
 export async function reportConversation(chat: Conversation, reason: string, evidence?: ChatMessage) {

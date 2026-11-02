@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- Node CommonJS test harness. */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -41,4 +42,19 @@ test('texto vazio e limites de mensagem ou apresentação são validados', () =>
   assert.throws(() => policy.chatText('   '));
   assert.throws(() => policy.chatText('x'.repeat(2001)));
   assert.throws(() => policy.chatText('x'.repeat(501), 500));
+});
+
+test('presença vence após dois minutos e ocultar online sempre prevalece', () => {
+  const now = 1_000_000;
+  const status = { showOnline: true, readReceipts: true, lastActiveAt: time(now - 30_000) };
+  assert.equal(policy.isOnline(status, now), true);
+  assert.equal(policy.isOnline({ ...status, lastActiveAt: time(now - 120_000) }, now), false);
+  assert.equal(policy.isOnline({ ...status, showOnline: false }, now), false);
+  assert.equal(policy.isOnline({ ...status, lastActiveAt: time(now + 60_000) }, now), false);
+  assert.equal(policy.isOnline(null, now), false);
+});
+
+test('leitura privada mantém o filtro de não lidas sem depender do visto público', () => {
+  assert.equal(policy.isUnread({ ...chat, privateReadAt: time(200) }, 'bob'), false);
+  assert.equal(policy.isUnread({ ...chat, privateReadAt: time(150) }, 'bob'), true);
 });
