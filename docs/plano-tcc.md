@@ -29,6 +29,8 @@ Os testes de emulador e o build passaram. A configuração de produção ainda n
 
 ## 3. Privacidade e acabamento
 
+Projetos/formação, perfil compartilhado do estudante, sugestões explicáveis e aviso com atendimento de privacidade foram implementados localmente. Ver publicação e ensaio em `perfis-vagas-privacidade.md`. Pedidos de exclusão são atendimento administrativo; não executam apagamento automático de todos os dados.
+
 - Auditar documentos antigos: o cadastro novo separa dados privados, mas não migra registros antigos automaticamente.
 - Estatísticas fictícias de uso já foram substituídas por destaques da plataforma. Revisar os exemplos ilustrativos restantes antes da apresentação.
 - Revisar links, estados vazios, erros e acesso sem login em todas as rotas.
@@ -49,7 +51,7 @@ Critério de conclusão: outra pessoa consegue reproduzir o percurso com as inst
 
 ## 5. Melhorias opcionais, após a estabilidade
 
-Favoritos de vagas; filtros por área/modalidade/localização; carga horária, bolsa e benefícios; edição de vagas. Evitar novas funcionalidades grandes antes de estabilizar o percurso principal.
+Favoritos de vagas; filtros adicionais por área/localização; carga horária, bolsa e benefícios; edição de vagas. Busca por cargo/empresa/cidade e filtro por modalidade já existem. A publicação ganhou área opcional, utilizada nas sugestões. Evitar novas funcionalidades grandes antes de estabilizar o percurso principal.
 
 ## Acompanhamento
 
