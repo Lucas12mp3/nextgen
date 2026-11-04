@@ -9,6 +9,7 @@ import { subscribeToPosts, type PostRecord } from "@/services/posts";
 import { subscribeVagas, type Vaga } from "@/services/vagas";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
+import RecommendedJobs from "@/components/jobs/RecommendedJobs";
 
 export default function FeedPage() {
 	const [user, setUser] = useState<User | null>(null);
@@ -173,6 +174,7 @@ export default function FeedPage() {
 							</div>
 						</div>
 
+						{user && profile?.tipoConta === "estudante" && <RecommendedJobs key={user.uid} userId={user.uid} skills={Array.isArray(profile.skills) ? profile.skills.filter((s): s is string => typeof s === "string").slice(0, 40) : []} jobs={vagasAbertas} />}
 						<div className="rounded-[24px] border border-[#dfeeff] bg-white p-5 shadow-sm">
 							<h3 className="text-sm font-bold uppercase tracking-[0.18em] text-[#123a5a]">Sobre o feed</h3>
 							<p className="mt-3 text-sm leading-6 text-slate-600">Aqui você acompanha publicações, oportunidades e atualizações da comunidade NextGen em um só lugar.</p>

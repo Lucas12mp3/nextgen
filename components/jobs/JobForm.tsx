@@ -4,6 +4,7 @@ import { useState } from "react";
 import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase/config";
 import { criarVaga } from "@/services/vagas";
+import { JOB_AREAS } from "@/lib/job-recommendations";
 
 type JobFormProps = {
   onCreated?: () => void;
@@ -15,6 +16,7 @@ export default function JobForm({ onCreated }: JobFormProps) {
   const [requisitos, setRequisitos] = useState("");
   const [modalidade, setModalidade] = useState("Presencial");
   const [local, setLocal] = useState("São Paulo, SP");
+  const [area, setArea] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -54,11 +56,13 @@ export default function JobForm({ onCreated }: JobFormProps) {
         descricao: trimmedDescricao,
         requisitos: trimmedRequisitos,
         modalidade,
+        area,
         local,
         status: "aberta",
       });
 
       setTitulo("");
+      setArea("");
       setDescricao("");
       setRequisitos("");
       setModalidade("Presencial");
@@ -118,6 +122,7 @@ export default function JobForm({ onCreated }: JobFormProps) {
           />
         </label>
 
+        <label className="block md:col-span-2"><span className="mb-1 block text-sm font-semibold text-slate-700">Área da oportunidade (opcional)</span><select value={area} onChange={e => setArea(e.target.value)} className="w-full rounded-2xl border border-[#cfe8ff] bg-[#f9fcff] px-4 py-2.5 text-sm"><option value="">Não informada</option>{JOB_AREAS.map(value => <option key={value}>{value}</option>)}</select><span className="mt-1 block text-xs text-slate-500">Ajuda os estudantes a encontrar oportunidades relacionadas à sua formação.</span></label>
         <label className="block">
           <span className="mb-1 block text-sm font-semibold text-slate-700">Modalidade</span>
           <select

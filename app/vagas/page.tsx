@@ -7,12 +7,14 @@ import { doc, getDoc } from "firebase/firestore";
 import dynamic from "next/dynamic";
 import { auth, db } from "@/firebase/config";
 import { subscribeVagas, type Vaga } from "@/services/vagas";
+import RecommendedJobs from "@/components/jobs/RecommendedJobs";
 
 const JobModal = dynamic(() => import("@/components/jobs/JobModal"), { ssr: false });
 
 export default function VagasPage() {
   const [user, setUser] = useState<User | null>(null);
   const [profileType, setProfileType] = useState<string | null>(null);
+  const [profileSkills, setProfileSkills] = useState<string[]>([]);
   const [vagas, setVagas] = useState<Vaga[]>([]);
   const [selectedVaga, setSelectedVaga] = useState<Vaga | null>(null);
   const [loading, setLoading] = useState(true);
@@ -23,6 +25,7 @@ export default function VagasPage() {
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      setProfileType(null); setProfileSkills([]);
 
       if (!u) {
         setProfileType(null);
@@ -32,7 +35,9 @@ export default function VagasPage() {
       try {
         const snap = await getDoc(doc(db, "users", u.uid));
         const data = snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+        if (auth.currentUser?.uid !== u.uid) return;
         setProfileType(typeof data?.tipoConta === "string" ? data.tipoConta : null);
+        setProfileSkills(Array.isArray(data?.skills) ? data.skills.filter((s): s is string => typeof s === "string").slice(0, 40) : []);
       } catch {
         setProfileType(null);
       }
@@ -92,6 +97,7 @@ export default function VagasPage() {
           </div>
         ) : (
           <div className="space-y-4">
+            {user && profileType === "estudante" && <RecommendedJobs key={user.uid} userId={user.uid} skills={profileSkills} jobs={filteredVagas} />}
             {filteredVagas.map((vaga) => (
               <article key={vaga.id} className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

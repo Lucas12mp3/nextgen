@@ -118,6 +118,7 @@ export default function JobModal({ vaga, currentUserId, isStudent = false, onClo
 
         <div className="mt-4 grid gap-3 text-sm text-slate-600 md:grid-cols-3">
           <span>{vaga.modalidade}</span>
+          {vaga.area && <span>Área: {vaga.area}</span>}
           <span>{vaga.local}</span>
           <span>{vaga.status === "aberta" ? "Aberta" : "Fechada"}</span>
         </div>
