@@ -6,6 +6,7 @@ import { onAuthStateChanged, type User } from "firebase/auth";
 import { auth, db } from "@/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { uploadResume, updateProfileDoc } from "@/services/perfil";
+import PortfolioEditor from "@/components/students/PortfolioEditor";
 
 export default function EditarPerfilEstudante() {
   const [user, setUser] = useState<User | null>(null);
@@ -157,6 +158,7 @@ export default function EditarPerfilEstudante() {
 
           {mensagem && <p role="status" className="text-sm text-slate-700 mt-2">{mensagem}</p>}
         </form>
+        {user && !loadFailed && <PortfolioEditor key={user.uid} userId={user.uid} />}
       </div>
     </main>
   );

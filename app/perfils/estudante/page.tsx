@@ -9,6 +9,7 @@ import { RequireProfileType } from "@/components/auth/RequireProfileType";
 import { calcularPontosDesafio, subscribeConquistas, subscribeRankingGeral, type Conquista, type RankingItem } from "@/services/desafios";
 import { openResumeInNewTab } from "@/services/perfil";
 import { ageFromDate } from "@/services/registration-policy";
+import StudentPortfolio from "@/components/students/StudentPortfolio";
 
 type StudentProfile = {
   nome?: string;
@@ -118,6 +119,7 @@ export default function PerfilEstudantePage() {
               </div>
 
               <div className="flex flex-wrap gap-3">
+                {user && <Link href={`/estudantes/${encodeURIComponent(user.uid)}`} className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a]">Ver perfil compartilhado</Link>}
                 <Link href="/mensagens" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a]">Mensagens</Link>
                 <Link href="/feed" className="rounded-full border border-[#cfe8ff] bg-white px-4 py-2 text-sm font-semibold text-[#123a5a] transition hover:bg-[#f5fbff]">Ir para o feed</Link>
                 <Link href="/perfils/estudante/editar" className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0d2d46]">Editar perfil</Link>
@@ -125,6 +127,7 @@ export default function PerfilEstudantePage() {
             </div>
           </div>
 
+          {user && <div className="mt-6"><StudentPortfolio key={user.uid} userId={user.uid} /></div>}
           <section className="mt-6 grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-[20px] border border-[#dfeeff] bg-white p-5 shadow-sm">
               <h2 className="text-lg font-black text-[#123a5a]">Sobre</h2>

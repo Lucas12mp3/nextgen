@@ -203,6 +203,38 @@ service cloud.firestore {
       allow update: if signedIn() && request.auth.uid == userId && validProfileEdit();
       allow read: if signedIn();
       allow create, update, delete: if false; // trusted Functions only
+      function portfolioOwner() {
+        return signedIn() && request.auth.uid == userId
+          && get(/databases/$(database)/documents/users/$(userId)).data.tipoConta == "estudante";
+      }
+      function portfolioReader() {
+        return signedIn() && get(/databases/$(database)/documents/users/$(userId)).data.tipoConta == "estudante";
+      }
+      match /projetos/{recordId} {
+        allow read: if portfolioReader();
+        allow create, update: if portfolioOwner() && recordId.matches("[0-9]")
+          && request.resource.data.keys().hasOnly(["nome", "descricao", "tecnologias", "link", "atualizadoEm"])
+          && profileText(request.resource.data, "nome", 120) && request.resource.data.nome.size() > 0
+          && profileText(request.resource.data, "descricao", 2000) && request.resource.data.descricao.size() > 0
+          && profileText(request.resource.data, "tecnologias", 300) && profileText(request.resource.data, "link", 500)
+          && (request.resource.data.link == "" || request.resource.data.link.matches("https://[^ ]+"))
+          && request.resource.data.atualizadoEm == request.time;
+        allow delete: if portfolioOwner();
+      }
+      match /formacoes/{recordId} {
+        allow read: if portfolioReader();
+        allow create, update: if portfolioOwner() && recordId.matches("[0-9]")
+          && request.resource.data.keys().hasOnly(["curso", "instituicao", "inicio", "conclusao", "situacao", "atualizadoEm"])
+          && profileText(request.resource.data, "curso", 120) && request.resource.data.curso.size() > 0
+          && profileText(request.resource.data, "instituicao", 120) && request.resource.data.instituicao.size() > 0
+          && request.resource.data.inicio is string && request.resource.data.inicio.matches("[12][0-9]{3}-(0[1-9]|1[0-2])")
+          && request.resource.data.conclusao is string
+          && (request.resource.data.conclusao == "" || (request.resource.data.conclusao.matches("[12][0-9]{3}-(0[1-9]|1[0-2])") && request.resource.data.conclusao >= request.resource.data.inicio))
+          && request.resource.data.situacao in ["cursando", "concluido", "trancado"]
+          && (request.resource.data.situacao != "concluido" || request.resource.data.conclusao != "")
+          && request.resource.data.atualizadoEm == request.time;
+        allow delete: if portfolioOwner();
+      }
       allow update: if isAdmin() && resource.data.tipoConta == "empresa"
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["companyStatus", "companyReviewedAt", "companyReviewedBy", "companyReviewAuditId"])
         && request.resource.data.companyStatus in ["pending", "verified", "rejected"]

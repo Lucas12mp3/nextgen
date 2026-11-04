@@ -149,7 +149,7 @@ export default function NotificationsPage() {
                     <div key={it.id} className="rounded-2xl border border-[#eaf4ff] bg-[#f9fcff] p-4">
                       <div className="flex flex-col justify-between gap-3 md:flex-row md:items-start">
                         <div>
-                          <strong className="text-[#123a5a]">{it.fromUserName || "Candidato"}</strong>
+                          {it.fromUserId ? <Link href={`/estudantes/${encodeURIComponent(it.fromUserId)}`} className="font-bold text-[#123a5a] underline">{it.fromUserName || "Candidato"} · Ver perfil</Link> : <strong>Candidato indisponível</strong>}
                           <div className="text-sm text-slate-600">Cargo: {it.role || "—"}</div>
                           <div className="text-sm text-slate-600">Status: {statusLabels[it.status || "pending"] || it.status}</div>
                           <p className="mt-2 text-sm text-slate-700">{it.message}</p>

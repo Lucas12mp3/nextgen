@@ -56,7 +56,7 @@ export default function StudentCard({ student, canPropose = false, challengeCoun
           )}
         </div>
       </div>
-      <Link href={`/mensagens?to=${encodeURIComponent(student.uid)}`} className="mt-4 block rounded-full border border-[#cfe8ff] px-4 py-2.5 text-center text-sm font-semibold text-[#123a5a] hover:bg-sky-50">Enviar mensagem</Link>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2"><Link href={`/estudantes/${encodeURIComponent(student.uid)}`} className="rounded-full bg-[#edf6ff] px-4 py-2.5 text-center text-sm font-semibold text-[#123a5a] hover:bg-sky-100">Ver perfil</Link><Link href={`/mensagens?to=${encodeURIComponent(student.uid)}`} className="rounded-full border border-[#cfe8ff] px-4 py-2.5 text-center text-sm font-semibold text-[#123a5a] hover:bg-sky-50">Enviar mensagem</Link></div>
       {canPropose && <div className="mt-5 border-t border-[#edf3ff] pt-4">
         <button type="button" aria-expanded={contactOpen} aria-controls={contactId} onClick={() => setContactOpen(!contactOpen)} className="w-full rounded-full bg-[#123a5a] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#20557e]">{contactOpen ? "Fechar proposta" : "Conversar sobre uma oportunidade"}</button>
         {contactOpen && <div id={contactId} className="mt-4 animate-enter"><ProposalForm toUserId={student.uid} /></div>}
