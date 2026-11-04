@@ -11,7 +11,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'https
 for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Event', 'MouseEvent']) Object.defineProperty(globalThis, name, { configurable: true, value: dom.window[name] });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = await import('react-dom/client');
-let container, root, listeners, auth, profiles, readProfile, signIn, router, modules, subscriptions;
+let container, root, listeners, auth, profiles, readProfile, signIn, router, modules, subscriptions, profileSubscriptions, search;
 const user = uid => ({ uid });
 const snapshot = data => ({ exists: () => !!data, get: key => data?.[key] });
 function emit(current) { auth.currentUser = current; for (const listener of [...listeners]) listener(current); }
@@ -23,7 +23,7 @@ function load(path) {
   vm.runInThisContext(`(function(exports, require) { ${compiled} })`)(exports, name => {
     if (name === 'react') return React;
     if (name === 'react/jsx-runtime') return jsx;
-    if (name === 'next/navigation') return { useRouter: () => router };
+    if (name === 'next/navigation') return { useRouter: () => router, useSearchParams: () => new URLSearchParams(search) };
     if (name === 'next/link') return { default: props => React.createElement('a', props, props.children) };
     if (name === '@/components/BrandLogo') return { default: () => React.createElement('span', null, 'NextGen') };
     if (name === '@/firebase/config') return { auth, db: {} };
@@ -31,15 +31,27 @@ function load(path) {
       listeners.add(listener); queueMicrotask(() => { if (listeners.has(listener)) listener(auth.currentUser); });
       return () => listeners.delete(listener);
     } };
-    if (name === 'firebase/firestore') return { doc: (_db, _collection, id) => id, getDoc: id => readProfile(id) };
+    if (name === 'firebase/firestore') return { doc: (_db, _collection, id) => id, getDoc: id => readProfile(id), onSnapshot: (id, update, error) => {
+      if (!profileSubscriptions.has(id)) profileSubscriptions.set(id, new Set());
+      const observer = { update, error }; profileSubscriptions.get(id).add(observer);
+      queueMicrotask(() => { if (profileSubscriptions.get(id)?.has(observer)) update(snapshot(profiles.get(id))); });
+      return () => profileSubscriptions.get(id).delete(observer);
+    } };
     if (name === '@/services/autenticar') return { entrar: (...args) => signIn(...args), sair: async () => emit(null) };
     if (name === '@/services/auth-errors') return load('services/auth-errors.ts');
     if (name === '@/services/chat-policy') return load('services/chat-policy.ts');
+    if (name === '@/services/chat') return { ...load('services/chat-policy.ts'),
+      subscribeConversations: (_id, update) => { queueMicrotask(() => update([])); return () => {}; },
+      getChatProfile: async id => ({ ...profiles.get(id), uid: id }),
+      findPeople: async () => ({ items: [...profiles].map(([id, data]) => ({ ...data, uid: id })), nextCursor: null }),
+    };
+    if (name === './ConversationView' || name === './ChatPrivacy' || name === './FriendshipControls') return { default: () => null };
+    if (name === './FriendsPanel') return { default: () => React.createElement('h2', null, 'Meus amigos') };
     if (name === '@/services/social') return { heartbeat: async () => {}, subscribeChatStatus: (uid, update) => {
       const sub = { uid, active: true }; subscriptions.push(sub);
       queueMicrotask(() => { if (sub.active) update({ showOnline: false, readReceipts: true, lastActiveAt: null }); });
       return () => { sub.active = false; };
-    } };
+    }, subscribeFriendships: (_id, update) => { queueMicrotask(() => update([])); return () => {}; } };
     throw new Error(`Unexpected module ${name}`);
   });
   modules.set(path, exports); return exports;
@@ -55,7 +67,7 @@ beforeEach(() => {
   readProfile = async id => snapshot(profiles.get(id));
   signIn = async () => { emit(user('student')); return auth.currentUser; };
   router = { destinations: [], replace(path) { this.destinations.push(path); } };
-  modules = new Map(); subscriptions = [];
+  modules = new Map(); subscriptions = []; profileSubscriptions = new Map(); search = '';
 });
 afterEach(async () => { await act(async () => root.unmount()); container.remove(); });
 
@@ -146,4 +158,52 @@ test('perfil que demora demais libera nova tentativa e ignora resposta atrasada'
   readProfile = async () => snapshot({ tipoConta: 'estudante' });
   await act(async () => [...container.querySelectorAll('button')].find(b => b.textContent === 'Verificar novamente').click());
   assert.deepEqual(router.destinations, ['/perfils/estudante']);
+});
+
+async function mountChat() { const Chat = load('components/chat/ChatWorkspace.tsx').default; await mount(React.createElement(Chat)); }
+test('administrador sem perfil recebe aviso em vez de contatos vazios', async () => {
+  auth.currentUser = user('admin');
+  await mountChat();
+  assert.match(container.querySelector('[role="alert"]').textContent, /perfil desta conta não foi encontrado/);
+  assert.match(container.textContent, /acesso de administrador é separado/);
+  assert.ok(container.querySelector('a[href="/privacidade#contato"]'));
+  assert.doesNotMatch(container.textContent, /Nenhum contato disponível/);
+});
+test('campo uid em documento de outra conta não é usado para assumir seu perfil', async () => {
+  profiles.delete('student');
+  profiles.set('legacy-document-id', { uid: 'student', nome: 'Perfil antigo', tipoConta: 'estudante' });
+  auth.currentUser = user('student');
+  await mountChat();
+  assert.match(container.querySelector('[role="alert"]').textContent, /não foi encontrado/);
+  assert.doesNotMatch(container.textContent, /Perfil antigo/);
+});
+test('restaurar o perfil no caminho correto libera o chat sem sair da conta', async () => {
+  profiles.set('other-student', { nome: 'Outro estudante', tipoConta: 'estudante' });
+  profiles.delete('student'); auth.currentUser = user('student');
+  await mountChat();
+  await act(async () => {
+    profiles.set('student', { uid: 'student', nome: 'Ana', tipoConta: 'estudante' });
+    for (const observer of profileSubscriptions.get('student')) observer.update(snapshot(profiles.get('student')));
+  });
+  assert.equal(container.querySelector('[role="alert"]'), null);
+  const discover = [...container.querySelectorAll('button')].find(button => button.textContent === '+ Nova conversa');
+  assert.ok(discover);
+  await act(async () => discover.click());
+  assert.ok([...container.querySelectorAll('button')].some(button => button.textContent === 'Conversar'));
+});
+test('tipo de perfil inválido e erro de consulta não aparecem como lista vazia', async () => {
+  profiles.set('student', { nome: 'Ana', tipoConta: 'admin' }); auth.currentUser = user('student');
+  await mountChat();
+  assert.match(container.querySelector('[role="alert"]').textContent, /tipo do perfil está incompleto/);
+  await act(async () => { for (const observer of profileSubscriptions.get('student')) observer.error(new Error('offline')); });
+  assert.match(container.querySelector('[role="alert"]').textContent, /Não foi possível verificar seu perfil/);
+});
+test('trocar para conta sem perfil não reaproveita a identidade anterior no chat', async () => {
+  auth.currentUser = user('student'); search = 'view=friends';
+  await mountChat();
+  assert.match(container.textContent, /Meus amigos/);
+  await act(async () => emit(user('missing')));
+  assert.match(container.querySelector('[role="alert"]').textContent, /não foi encontrado/);
+  assert.doesNotMatch(container.textContent, /Meus amigos/);
+  assert.equal(profileSubscriptions.get('student').size, 0);
 });

@@ -47,6 +47,16 @@ O chat não usa Cloud Functions nem Storage. Consome leituras e escritas do Fire
 
 ## Publicação
 
+### Perfil da conta e permissão administrativa
+
+O perfil é encontrado pelo caminho `users/{UID do Authentication}`. O ID do documento deve ser o UID da mesma conta; alterar apenas um campo `uid` dentro de outro documento não altera seu caminho nem transfere o cadastro. O diretório de contatos também usa o ID real do documento, não um campo editável.
+
+`admins/{UID}` concede acesso administrativo, mas não cria um perfil para mensagens. Para conversar, a mesma conta precisa do próprio documento em `users/{UID}`, com `nome` e `tipoConta` igual a `estudante` ou `empresa`. Empresas precisam de aprovação para iniciar contatos. O tipo `admin` não é um tipo de perfil de chat.
+
+Se uma conta já existe no Authentication e perdeu seu perfil, a equipe deve conferir o titular antes de restaurar o documento pelo Console Firebase. Não reutilize o perfil nem copie documentos privados de outra identidade. O cadastro normal pelo site cria os documentos de maneira atômica; essa conferência manual é recuperação de dados, não uma mudança das regras para permitir autoaprovação.
+
+A caixa de mensagens informa separadamente perfil ausente, tipo inválido e erro de conexão. Esses estados não são apresentados como uma lista de contatos vazia. A correção do perfil no banco é reconhecida pelo listener sem exigir sair da conta.
+
 Publique as regras no mesmo projeto Firebase usado pelo site, depois publique o código na Vercel:
 
 ```powershell

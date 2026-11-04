@@ -31,6 +31,7 @@ function Inbox({ user }: { user: User }) {
   const requestedUid = params.get("to");
   const requestedView = params.get("view");
   const [profile, setProfile] = useState<ChatProfile | null>(null);
+  const [profileState, setProfileState] = useState<"loading" | "ready" | "missing" | "invalid" | "error">("loading");
   const [chats, setChats] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState("");
@@ -52,8 +53,12 @@ function Inbox({ user }: { user: User }) {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => onSnapshot(doc(db, "users", user.uid), snap => {
-    setProfile(snap.exists() ? { uid: user.uid, nome: String(snap.get("nome") || "Usuário"), tipoConta: snap.get("tipoConta"), companyStatus: snap.get("companyStatus") } : null);
-  }, () => setError("Não foi possível carregar sua conta.")), [user.uid]);
+    if (!snap.exists()) { setProfile(null); setProfileState("missing"); return; }
+    const type = snap.get("tipoConta");
+    if (!["estudante", "empresa"].includes(type)) { setProfile(null); setProfileState("invalid"); return; }
+    setProfile({ uid: user.uid, nome: String(snap.get("nome") || "Usuário"), tipoConta: type, companyStatus: snap.get("companyStatus") });
+    setProfileState("ready");
+  }, () => { setProfile(null); setProfileState("error"); }), [user.uid]);
 
   useEffect(() => subscribeConversations(user.uid, list => { setChats(list); setLoading(false); }, () => {
     setError("Não foi possível abrir suas conversas. Confira sua conexão e a publicação das regras do Firestore."); setLoading(false);
@@ -110,6 +115,9 @@ function Inbox({ user }: { user: User }) {
   const other = otherId ? profiles[otherId] || (target?.uid === otherId ? target : null) : target;
   const visibleChats = chats.filter(item => filter === "all" || (filter === "requests" ? item.status === "pending" && item.createdBy !== user.uid : isUnread(item, user.uid)));
   const eligiblePeople = people.filter(person => profile && canContact(profile, person) && `${person.nome} ${person.instituicao || ""}`.toLocaleLowerCase("pt-BR").includes(search.toLocaleLowerCase("pt-BR")));
+
+  if (profileState === "loading") return <main className="mx-auto max-w-3xl p-8 text-center"><h1 className="text-2xl font-black text-[#123a5a]">Mensagens</h1><p role="status" className="mt-5">Carregando seu perfil...</p><Link href="/" className={`${secondary} mt-5 inline-block`}>Página inicial</Link></main>;
+  if (profileState !== "ready") return <main className="min-h-[70dvh] bg-[#edf6ff] px-4 py-8 text-slate-800"><div className="mx-auto max-w-2xl rounded-3xl border border-[#dfeeff] bg-white p-6 sm:p-8"><h1 className="text-2xl font-black text-[#123a5a]">Seu perfil precisa de atenção</h1><div role="alert" className="my-5 space-y-3 text-sm leading-7"><p>{profileState === "missing" ? "Sua conta está conectada, mas o perfil desta conta não foi encontrado. Por isso não conseguimos mostrar os contatos disponíveis." : profileState === "invalid" ? "Sua conta está conectada, mas o tipo do perfil está incompleto. Para conversar, é necessário um perfil de estudante ou empresa." : "Não foi possível verificar seu perfil. Confira a conexão e tente novamente."}</p>{profileState !== "error" && <p>O acesso de administrador é separado do perfil de estudante ou empresa. Peça à administração para conferir o vínculo do cadastro.</p>}</div><div className="flex flex-wrap gap-3"><Link href="/privacidade#contato" className={primary}>Solicitar ajuda</Link><Link href="/" className={secondary}>Página inicial</Link><button type="button" onClick={() => window.location.reload()} className={secondary}>Tentar novamente</button></div></div></main>;
 
   return <main className="min-h-[calc(100dvh-85px)] bg-[#edf6ff] p-3 text-slate-800 sm:p-6">
     <div className="mx-auto max-w-6xl">
