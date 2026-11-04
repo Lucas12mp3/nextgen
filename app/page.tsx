@@ -289,19 +289,6 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-[#dfeeff] bg-white/80">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8 text-sm text-slate-600 md:flex-row md:items-center md:justify-between lg:px-10">
-          <p className="text-xs text-slate-500">Conectando educação, talentos e oportunidades.</p>
-
-          <div className="flex flex-wrap gap-5">
-            <a href="#sobre" className="transition hover:text-[#123a5a]">Sobre</a>
-            <a href="#beneficios" className="transition hover:text-[#123a5a]">Benefícios</a>
-            <a href="#oportunidades" className="transition hover:text-[#123a5a]">Oportunidades</a>
-            <a href="#empresas" className="transition hover:text-[#123a5a]">Empresas</a>
-          </div>
-        </div>
-      </footer>
-
       {selectedVaga && (
         <JobModal
           vaga={selectedVaga}

@@ -280,6 +280,28 @@ service cloud.firestore {
           && request.resource.data.readAt == request.time;
       }
     }
+    match /privacyRequests/{requestId} {
+      function validRequest() {
+        let data = request.resource.data;
+        return signedIn() && requestId == request.auth.uid && data.userId == request.auth.uid
+          && data.keys().hasOnly(["userId", "generation", "kind", "message", "status", "response", "reviewedBy", "createdAt", "updatedAt"])
+          && data.generation is string && data.generation.matches("[a-f0-9-]{36}")
+          && data.kind in ["acesso", "correcao", "exclusao", "ajuda"]
+          && data.message is string && data.message.size() >= 10 && data.message.size() <= 2000
+          && data.status == "pending" && data.response == "" && data.reviewedBy == ""
+          && data.createdAt == request.time && data.updatedAt == request.time;
+      }
+      allow get: if signedIn() && (requestId == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow create: if validRequest();
+      allow update: if (resource.data.status == "resolved" && validRequest() && request.resource.data.generation != resource.data.generation)
+        || (isAdmin() && resource.data.status in ["pending", "reviewed"]
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["response", "status", "reviewedBy", "updatedAt"])
+          && request.resource.data.status in ["reviewed", "resolved"]
+          && request.resource.data.response is string && request.resource.data.response.size() > 0 && request.resource.data.response.size() <= 2000
+          && request.resource.data.reviewedBy == request.auth.uid && request.resource.data.updatedAt == request.time);
+      allow delete: if false;
+    }
     match /admins/{adminId} {
       allow get: if signedIn() && request.auth.uid == adminId;
       allow list, write: if false;

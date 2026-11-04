@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import PageMotion from "@/components/PageMotion";
 import ChatActivityProvider from "@/components/chat/ChatActivityProvider";
+import Footer from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: "NextGen | Conectando jovens ao futuro",
@@ -26,6 +27,7 @@ export default function RootLayout({
         <Header />
         <PageMotion />
         {children}
+        <Footer />
         <Analytics />
         </ChatActivityProvider>
       </body>

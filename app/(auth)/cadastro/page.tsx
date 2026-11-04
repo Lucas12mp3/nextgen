@@ -336,6 +336,7 @@ export default function CadastroPage() {
                 />
               </div>
 
+              <p className="text-xs leading-6 text-slate-500">Antes de criar sua conta, consulte <Link href="/privacidade" className="font-semibold text-[#123a5a] underline">Privacidade e ajuda</Link> para conhecer os dados utilizados e quem pode consultá-los.</p>
               {erro && <p role="alert" className="text-sm font-medium text-red-500">{erro}</p>}
 
               <button
