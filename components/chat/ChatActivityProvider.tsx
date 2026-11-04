@@ -14,17 +14,16 @@ export const useChatActivity = () => useContext(ActivityContext);
 export default function ChatActivityProvider({ children }: { children: ReactNode }) {
   const [userId, setUserId] = useState<string | null>(null);
   useEffect(() => onAuthStateChanged(auth, user => setUserId(user?.uid ?? null)), []);
-  return userId ? <ActivitySession key={userId} userId={userId}>{children}</ActivitySession>
-    : <ActivityContext.Provider value={initial}>{children}</ActivityContext.Provider>;
-}
-
-function ActivitySession({ userId, children }: { userId: string; children: ReactNode }) {
-  const [activity, setActivity] = useState<Activity>({ ...initial, userId });
-  useEffect(() => subscribeChatStatus(userId, status => setActivity({ userId, status: status ?? initial.status, ready: true, error: "" }),
-    () => setActivity({ ...initial, userId, error: "Não foi possível carregar sua privacidade. Confira a conexão e a publicação das regras." })), [userId]);
+  const [activity, setActivity] = useState<Activity>(initial);
+  useEffect(() => {
+    if (!userId) return;
+    return subscribeChatStatus(userId, status => setActivity({ userId, status: status ?? initial.status, ready: true, error: "" }),
+      () => setActivity({ ...initial, userId, error: "Não foi possível carregar sua privacidade. Confira a conexão e a publicação das regras." }));
+  }, [userId]);
+  const current = activity.userId === userId ? activity : { ...initial, userId };
 
   useEffect(() => {
-    if (!activity.ready || !activity.status.showOnline) return;
+    if (!userId || !current.ready || !current.status.showOnline) return;
     let busy = false, lastAttempt = 0;
     function pulse() {
       if (busy || document.hidden || !navigator.onLine || auth.currentUser?.uid !== userId || Date.now() - lastAttempt < 40_000) return;
@@ -36,6 +35,8 @@ function ActivitySession({ userId, children }: { userId: string; children: React
     const timer = window.setInterval(pulse, 45_000);
     document.addEventListener("visibilitychange", pulse); window.addEventListener("online", pulse);
     return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", pulse); window.removeEventListener("online", pulse); };
-  }, [userId, activity.ready, activity.status.showOnline]);
-  return <ActivityContext.Provider value={activity}>{children}</ActivityContext.Provider>;
+  }, [userId, current.ready, current.status.showOnline]);
+  // Keep the same provider and child position during sign-in/out. Replacing the
+  // wrapper remounts pages and invalidates pending login/registration navigation.
+  return <ActivityContext.Provider value={current}>{children}</ActivityContext.Provider>;
 }

@@ -1,9 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { entrar } from "@/services/autenticar";
-import { db } from "@/firebase/config";
+import { entrar, sair } from "@/services/autenticar";
+import { auth, db } from "@/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 import BrandLogo from "@/components/BrandLogo";
 import { authErrorMessage } from "@/services/auth-errors";
@@ -13,31 +14,62 @@ export default function LoginPage() {
   const [senha, setSenha] = useState("");
   const [erro, setErro] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [verificando, setVerificando] = useState(true);
+  const [autenticado, setAutenticado] = useState(false);
+  const [tentativa, setTentativa] = useState(0);
+  const enviando = useRef(false);
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    let sequence = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stop = onAuthStateChanged(auth, user => {
+      const request = ++sequence;
+      clearTimeout(timer);
+      setAutenticado(!!user); setErro("");
+      if (!user) { setVerificando(false); return; }
+      setVerificando(true);
+      const current = () => active && sequence === request && auth.currentUser?.uid === user.uid;
+      timer = setTimeout(() => {
+        if (!current()) return;
+        sequence++;
+        setVerificando(false);
+        setErro("Sua conta entrou, mas o perfil demorou para carregar. Confira a conexão e use Verificar novamente.");
+      }, 12000);
+      void getDoc(doc(db, "users", user.uid)).then(snap => {
+        if (!current()) return;
+        const type = snap.get("tipoConta");
+        if (!snap.exists() || !["empresa", "estudante"].includes(type)) throw new Error("Sua conta entrou, mas o perfil não foi encontrado ou está incompleto. Procure a administração para recuperar o cadastro.");
+        router.replace(type === "empresa" ? "/perfils/empresa" : "/perfils/estudante");
+      }).catch(error => {
+        if (current()) {
+          setVerificando(false);
+          setErro(authErrorMessage(error, "Sua conta entrou, mas não foi possível carregar o perfil. Confira a conexão e tente novamente."));
+        }
+      }).finally(() => { if (sequence === request) clearTimeout(timer); });
+    });
+    return () => { active = false; clearTimeout(timer); stop(); };
+  }, [router, tentativa]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (carregando) return;
+    if (enviando.current) return;
+    enviando.current = true;
     setErro("");
     setCarregando(true);
 
     try {
-      const user = await entrar(email, senha);
-      // busca perfil no Firestore para decidir para onde redirecionar
-      const profileSnap = await getDoc(doc(db, "users", user.uid));
-      const data = profileSnap.exists() ? (profileSnap.data() as Record<string, unknown>) : null;
-      if (!data) throw new Error("Seu perfil não foi encontrado. Procure a administração para concluir a recuperação do cadastro.");
-      if (data && data.tipoConta === "empresa") {
-        router.push("/perfils/empresa");
-      } else {
-        router.push("/perfils/estudante");
-      }
+      await entrar(email, senha);
     } catch (error) {
       setErro(authErrorMessage(error, "Não foi possível entrar. Tente novamente."));
     } finally {
+      enviando.current = false;
       setCarregando(false);
     }
   }
+
+  if (verificando || autenticado) return <main className="min-h-[70dvh] bg-[#edf6ff] px-4 py-12 text-slate-800"><div className="mx-auto max-w-lg rounded-3xl border border-[#dfeeff] bg-white p-8 text-center shadow-sm"><h1 className="text-2xl font-black text-[#123a5a]">{verificando ? "Acessando sua conta" : "Sua conta está conectada"}</h1>{erro ? <p role="alert" className="my-5 text-sm leading-7 text-red-700">{erro}</p> : <p role="status" className="my-5 text-sm text-slate-600">Verificando seu perfil para abrir a página correta...</p>}<div className="flex flex-wrap justify-center gap-3">{!verificando && <button type="button" onClick={() => setTentativa(value => value + 1)} className="rounded-full bg-[#123a5a] px-4 py-2 text-sm font-semibold text-white">Verificar novamente</button>}<Link href="/" className="rounded-full border border-[#cfe8ff] px-4 py-2 text-sm font-semibold text-[#123a5a]">Página inicial</Link>{!verificando && <button type="button" onClick={() => void sair().catch(error => setErro(authErrorMessage(error, "Não foi possível sair. Tente novamente.")))} className="px-4 py-2 text-sm font-semibold underline">Entrar com outra conta</button>}</div></div></main>;
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#dfeeff_0%,_#f6fbff_34%,_#edf6ff_100%)] px-4 py-10 text-slate-800">
